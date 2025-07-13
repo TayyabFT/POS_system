@@ -87,7 +87,7 @@ const DashboardPage = () => {
       </button>
 
       {/* Sidebar */}
-      <aside className={`fixed md:relative z-40 w-64 bg-gray-600 text-black h-full transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-64 md:left-0'}`}>
+      <aside className={`fixed md:relative z-40 w-64 bg-white text-black h-full transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-64 md:left-0'}`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           <div className="text-2xl font-bold flex items-center text-blue-400">
             <FiShoppingCart className="mr-2" /> Flow POS
@@ -101,7 +101,7 @@ const DashboardPage = () => {
         </div>
         
         <nav className="p-4 space-y-2">
-          <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-800 text-blue-400 font-semibold">
+          <div className="flex items-center space-x-3 p-3 rounded-lg bg-blue-400 text-white font-semibold">
             <FiPieChart className="w-5 h-5" /> <span>Dashboard</span>
           </div>
           <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 hover:text-blue-400 cursor-pointer transition-colors">

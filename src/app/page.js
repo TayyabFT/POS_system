@@ -6,10 +6,15 @@ import Image from 'next/image';
 import dashboardImage from "@/assets/images/pos-dashboard.png"
 import qrcodedemo from "@/assets/images/qrcodedemo.png"
 import posModules from "@/assets/images/posModule.png"
+import { useRouter } from 'next/navigation';
 
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
+const router = useRouter();
+  const handleDashboardClick = () => {
+    router.push('/dashboard');
+  };
 
   const features = [
     {
@@ -109,8 +114,8 @@ const LandingPage = () => {
           </div>
           
           <div className="hidden md:block">
-            <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">
-              Get Started
+            <button onClick={handleDashboardClick} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition duration-300">
+              Dashboard
             </button>
           </div>
           
