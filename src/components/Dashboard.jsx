@@ -81,49 +81,49 @@ const DashboardPage = () => {
       {/* Mobile Menu Button */}
       <button 
         onClick={() => setIsMobileMenuOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-gray-900 text-white"
+        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-blue-600 text-white"
       >
         <FiMenu className="w-6 h-6" />
       </button>
 
       {/* Sidebar */}
-      <aside className={`fixed md:relative z-40 w-64 bg-white text-black h-full transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-64 md:left-0'}`}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          <div className="text-2xl font-bold flex items-center text-blue-400">
+      <aside className={`fixed md:relative z-40 w-64 bg-white text-gray-800 h-full transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-64 md:left-0'} shadow-lg`}>
+        <div className="flex items-center justify-between p-4 border-b border-gray-200">
+          <div className="text-2xl font-bold flex items-center text-blue-600">
             <FiShoppingCart className="mr-2" /> Flow POS
           </div>
           <button 
             onClick={() => setIsMobileMenuOpen(false)}
-            className="md:hidden text-gray-400 hover:text-white"
+            className="md:hidden text-gray-500 hover:text-gray-700"
           >
             <FiX className="w-6 h-6" />
           </button>
         </div>
         
-        <nav className="p-4 space-y-2">
-          <div className="flex items-center space-x-3 p-3 rounded-lg bg-blue-400 text-white font-semibold">
+        <nav className="p-4 space-y-1">
+          <div className="flex items-center space-x-3 p-3 rounded-lg bg-blue-100 text-blue-600 font-semibold">
             <FiPieChart className="w-5 h-5" /> <span>Dashboard</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 hover:text-blue-400 cursor-pointer transition-colors">
+          <a href="/products" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiPackage className="w-5 h-5" /> <span>Products</span>
-          </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 hover:text-blue-400 cursor-pointer transition-colors">
+          </a>
+          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiShoppingBag className="w-5 h-5" /> <span>Sales</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 hover:text-blue-400 cursor-pointer transition-colors">
+          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiClipboard className="w-5 h-5" /> <span>Invoices</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 hover:text-blue-400 cursor-pointer transition-colors">
+          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiBarChart2 className="w-5 h-5" /> <span>Reports</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 hover:text-blue-400 cursor-pointer transition-colors">
+          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiUsers className="w-5 h-5" /> <span>Customers</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 hover:text-blue-400 cursor-pointer transition-colors">
+          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiSettings className="w-5 h-5" /> <span>Settings</span>
           </div>
-          <div className="border-t border-gray-800 pt-2 mt-2">
-            <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-gray-800 text-red-400 hover:text-red-300 cursor-pointer transition-colors">
+          <div className="border-t border-gray-200 pt-2 mt-2">
+            <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-red-100 text-red-500 hover:text-red-700 cursor-pointer transition-colors">
               <FiLogOut className="w-5 h-5" /> <span>Logout</span>
             </div>
           </div>
@@ -148,8 +148,9 @@ const DashboardPage = () => {
                 className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <button className="p-2 rounded-full bg-white shadow-sm hover:bg-gray-100">
+            <button className="p-2 rounded-full bg-white shadow-sm hover:bg-gray-100 relative">
               <FiBell className="w-5 h-5 text-gray-600" />
+              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
             </button>
             <div className="flex items-center space-x-2">
               <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
@@ -160,7 +161,6 @@ const DashboardPage = () => {
             </div>
           </div>
         </header>
-
         {/* Date Filter */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2 bg-white p-1 rounded-lg shadow-sm">
