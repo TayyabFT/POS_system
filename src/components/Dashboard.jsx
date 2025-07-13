@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from 'next/navigation';
+
 import {
   FiPieChart,
   FiDollarSign,
@@ -42,7 +44,7 @@ import {
 const DashboardPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("today");
-
+  const router = useRouter();
   const salesData = [
     { month: "Feb", sales: 2400, purchases: 1400 },
     { month: "Mar", sales: 3800, purchases: 2000 },
@@ -104,22 +106,22 @@ const DashboardPage = () => {
           <div className="flex items-center space-x-3 p-3 rounded-lg bg-blue-100 text-blue-600 font-semibold">
             <FiPieChart className="w-5 h-5" /> <span>Dashboard</span>
           </div>
-          <a href="/products" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <a onClick={() => router.push('/products')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiPackage className="w-5 h-5" /> <span>Products</span>
           </a>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <div onClick={()=>router.push('/sales')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiShoppingBag className="w-5 h-5" /> <span>Sales</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <div onClick={() => router.push('/Invoices')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiClipboard className="w-5 h-5" /> <span>Invoices</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <div onClick={() => router.push('/Reports')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiBarChart2 className="w-5 h-5" /> <span>Reports</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <div onClick={() => router.push('/customers')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiUsers className="w-5 h-5" /> <span>Customers</span>
           </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <div onClick={() => router.push('/settings')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiSettings className="w-5 h-5" /> <span>Settings</span>
           </div>
           <div className="border-t border-gray-200 pt-2 mt-2">
