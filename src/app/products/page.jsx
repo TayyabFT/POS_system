@@ -1,18 +1,17 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import qrcodedemo from "@/assets/images/qrcodedemo.png"
-
+import qrcodedemo from "@/assets/images/qrcodedemo.png";
 import { 
   FiPlus, 
   FiShoppingCart,
-  FiPieChart ,
-  FiShoppingBag ,
-  FiClipboard ,
-  FiBarChart2 ,
-  FiUsers ,
-  FiSettings ,
-  FiLogOut ,
+  FiPieChart,
+  FiShoppingBag,
+  FiClipboard,
+  FiBarChart2,
+  FiUsers,
+  FiSettings,
+  FiLogOut,
   FiSearch, 
   FiEdit, 
   FiTrash, 
@@ -26,7 +25,8 @@ import {
   FiUser,
   FiChevronDown,
   FiFilter,
-  FiDownload
+  FiDownload,
+  FiImage
 } from 'react-icons/fi';
 import Image from 'next/image';
 
@@ -40,7 +40,8 @@ const mockProducts = [
     stock: 45,
     status: 'active',
     sku: 'LC-001',
-    image: qrcodedemo
+    image: qrcodedemo,
+    description: 'Premium quality latte cup'
   },
   {
     id: 2,
@@ -51,7 +52,8 @@ const mockProducts = [
     stock: 12,
     status: 'inactive',
     sku: 'HG-045',
-    image: qrcodedemo
+    image: qrcodedemo,
+    description: 'Strong hold hair styling gel'
   },
   {
     id: 3,
@@ -62,7 +64,8 @@ const mockProducts = [
     stock: 23,
     status: 'active',
     sku: 'WE-112',
-    image: qrcodedemo
+    image: qrcodedemo,
+    description: 'Noise cancelling wireless earbuds'
   },
   {
     id: 4,
@@ -73,7 +76,8 @@ const mockProducts = [
     stock: 56,
     status: 'active',
     sku: 'TS-789',
-    image: qrcodedemo
+    image: qrcodedemo,
+    description: '100% organic cotton t-shirt'
   },
 ];
 
@@ -83,9 +87,23 @@ const ProductPage = () => {
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [newProduct, setNewProduct] = useState({
+    name: '',
+    category: '',
+    price: '',
+    cost: '',
+    stock: '',
+    status: 'active',
+    sku: '',
+    image: qrcodedemo,
+    description: '',
+    barcode: ''
+  });
+  const [errors, setErrors] = useState({});
+  const [imagePreview, setImagePreview] = useState(qrcodedemo);
 
   useEffect(() => {
-    // Fetch products from API or use mock for now
     setProducts(mockProducts);
   }, []);
 
@@ -101,6 +119,81 @@ const ProductPage = () => {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  const validateForm = () => {
+    const newErrors = {};
+    if (!newProduct.name) newErrors.name = 'Product name is required';
+    if (!newProduct.category) newErrors.category = 'Category is required';
+    if (!newProduct.price || isNaN(newProduct.price)) newErrors.price = 'Valid price is required';
+    if (!newProduct.cost || isNaN(newProduct.cost)) newErrors.cost = 'Valid cost is required';
+    if (!newProduct.stock || isNaN(newProduct.stock)) newErrors.stock = 'Valid stock quantity is required';
+    if (!newProduct.sku) newErrors.sku = 'SKU is required';
+    return newErrors;
+  };
+
+  const handleAddProduct = () => {
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      return;
+    }
+
+    const productToAdd = {
+      ...newProduct,
+      id: products.length + 1,
+      price: parseFloat(newProduct.price),
+      cost: parseFloat(newProduct.cost),
+      stock: parseInt(newProduct.stock),
+      image: imagePreview
+    };
+    
+    setProducts([...products, productToAdd]);
+    resetForm();
+    setIsAddProductModalOpen(false);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setNewProduct({
+      ...newProduct,
+      [name]: value
+    });
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: null
+      });
+    }
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const resetForm = () => {
+    setNewProduct({
+      name: '',
+      category: '',
+      price: '',
+      cost: '',
+      stock: '',
+      status: 'active',
+      sku: '',
+      image: qrcodedemo,
+      description: '',
+      barcode: ''
+    });
+    setImagePreview(qrcodedemo);
+    setErrors({});
+  };
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       {/* Mobile Menu Button */}
@@ -111,7 +204,7 @@ const ProductPage = () => {
         <FiMenu className="w-6 h-6" />
       </button>
 
-      {/* Sidebar - Same as Dashboard */}
+      {/* Sidebar */}
       <aside className={`fixed md:relative z-40 w-64 bg-white text-gray-800 h-full transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-64 md:left-0'} shadow-lg`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="text-2xl font-bold flex items-center text-blue-600">
@@ -165,7 +258,10 @@ const ProductPage = () => {
           </div>
           
           <div className="flex items-center space-x-4 w-full md:w-auto">
-            <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={() => setIsAddProductModalOpen(true)}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <FiPlus className="mr-2" /> Add Product
             </button>
             <button className="p-2 rounded-full bg-white shadow-sm hover:bg-gray-100 relative">
@@ -281,6 +377,7 @@ const ProductPage = () => {
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                          <div className="text-xs text-gray-500">{product.description}</div>
                         </div>
                       </div>
                     </td>
@@ -338,8 +435,8 @@ const ProductPage = () => {
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">1</span> to <span className="font-medium">4</span> of{' '}
-                  <span className="font-medium">4</span> results
+                  Showing <span className="font-medium">1</span> to <span className="font-medium">{filteredProducts.length}</span> of{' '}
+                  <span className="font-medium">{filteredProducts.length}</span> results
                 </p>
               </div>
               <div>
@@ -387,6 +484,238 @@ const ProductPage = () => {
           </div>
         </div>
       </main>
+
+      {/* Add Product Modal */}
+      {isAddProductModalOpen && (
+        <div className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800">Add New Product</h2>
+                <button 
+                  onClick={() => {
+                    setIsAddProductModalOpen(false);
+                    resetForm();
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FiX className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Left Column */}
+                <div className="space-y-4">
+                  {/* Product Image */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
+                    <div className="flex items-center justify-center w-full">
+                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                          {imagePreview ? (
+                            <div className="relative w-full h-full">
+                              <Image
+                                src={imagePreview}
+                                alt="Product preview"
+                                layout="fill"
+                                objectFit="contain"
+                                className="rounded-lg"
+                              />
+                            </div>
+                          ) : (
+                            <>
+                              <FiImage className="w-8 h-8 mb-3 text-gray-400" />
+                              <p className="mb-2 text-sm text-gray-500">Click to upload</p>
+                              <p className="text-xs text-gray-500">PNG, JPG (Max. 2MB)</p>
+                            </>
+                          )}
+                        </div>
+                        <input 
+                          id="product-image" 
+                          type="file" 
+                          className="hidden" 
+                          accept="image/*"
+                          onChange={handleImageChange}
+                        />
+                      </label>
+                    </div>
+                  </div>
+
+                  {/* Basic Information */}
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">Product Name *</label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={newProduct.name}
+                      onChange={handleInputChange}
+                      className={`mt-1 block w-full rounded-md border ${errors.name ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
+                    />
+                    {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                  </div>
+
+                  <div>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea
+                      id="description"
+                      name="description"
+                      value={newProduct.description}
+                      onChange={handleInputChange}
+                      rows={3}
+                      className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                    />
+                  </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="space-y-4">
+                  {/* SKU and Barcode */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="sku" className="block text-sm font-medium text-gray-700">SKU *</label>
+                      <input
+                        type="text"
+                        id="sku"
+                        name="sku"
+                        value={newProduct.sku}
+                        onChange={handleInputChange}
+                        className={`mt-1 block w-full rounded-md border ${errors.sku ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
+                      />
+                      {errors.sku && <p className="mt-1 text-sm text-red-600">{errors.sku}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="barcode" className="block text-sm font-medium text-gray-700">Barcode</label>
+                      <input
+                        type="text"
+                        id="barcode"
+                        name="barcode"
+                        value={newProduct.barcode}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Category */}
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category *</label>
+                    <select
+                      id="category"
+                      name="category"
+                      value={newProduct.category}
+                      onChange={handleInputChange}
+                      className={`mt-1 block w-full rounded-md border ${errors.category ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
+                    >
+                      <option value="">Select a category</option>
+                      {categories.map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                      <option value="new">+ Add New Category</option>
+                    </select>
+                    {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+                  </div>
+
+                  {/* Pricing */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="price" className="block text-sm font-medium text-gray-700">Price *</label>
+                      <div className="relative mt-1 rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">$</span>
+                        </div>
+                        <input
+                          type="number"
+                          id="price"
+                          name="price"
+                          value={newProduct.price}
+                          onChange={handleInputChange}
+                          step="0.01"
+                          min="0"
+                          className={`block w-full rounded-md border ${errors.price ? 'border-red-500' : 'border-gray-300'} pl-7 pr-12 focus:border-blue-500 focus:ring-blue-500 p-2`}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      {errors.price && <p className="mt-1 text-sm text-red-600">{errors.price}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="cost" className="block text-sm font-medium text-gray-700">Cost *</label>
+                      <div className="relative mt-1 rounded-md shadow-sm">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <span className="text-gray-500 sm:text-sm">$</span>
+                        </div>
+                        <input
+                          type="number"
+                          id="cost"
+                          name="cost"
+                          value={newProduct.cost}
+                          onChange={handleInputChange}
+                          step="0.01"
+                          min="0"
+                          className={`block w-full rounded-md border ${errors.cost ? 'border-red-500' : 'border-gray-300'} pl-7 pr-12 focus:border-blue-500 focus:ring-blue-500 p-2`}
+                          placeholder="0.00"
+                        />
+                      </div>
+                      {errors.cost && <p className="mt-1 text-sm text-red-600">{errors.cost}</p>}
+                    </div>
+                  </div>
+
+                  {/* Stock and Status */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="stock" className="block text-sm font-medium text-gray-700">Stock *</label>
+                      <input
+                        type="number"
+                        id="stock"
+                        name="stock"
+                        value={newProduct.stock}
+                        onChange={handleInputChange}
+                        min="0"
+                        className={`mt-1 block w-full rounded-md border ${errors.stock ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
+                      />
+                      {errors.stock && <p className="mt-1 text-sm text-red-600">{errors.stock}</p>}
+                    </div>
+                    <div>
+                      <label htmlFor="status" className="block text-sm font-medium text-gray-700">Status</label>
+                      <select
+                        id="status"
+                        name="status"
+                        value={newProduct.status}
+                        onChange={handleInputChange}
+                        className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsAddProductModalOpen(false);
+                    resetForm();
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddProduct}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Add Product
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
