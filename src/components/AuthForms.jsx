@@ -48,7 +48,7 @@ const router = useRouter();
   if (isLogin) {
     // Handle login logic here (API call, validation, etc.)
     // Then navigate to dashboard
-    router.push('/dashboard');
+    router.push('/setupbusiness');
   } else {
     // Handle signup logic
     console.log('Signup form submitted');
