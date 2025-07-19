@@ -16,7 +16,7 @@ import {
   FiShoppingCart
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
-
+import { useRouter } from 'next/navigation';
 const BusinessSetup = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
@@ -114,10 +114,11 @@ const BusinessSetup = () => {
   const prevStep = () => {
     setCurrentStep(prev => Math.max(prev - 1, 1));
   };
-
+const router = useRouter();
   const handleSubmit = (e) => {
     e.preventDefault();
     console.log('Form submitted:', formData);
+    
     // In a real app, you would send this data to your API
   };
 
@@ -586,6 +587,9 @@ const BusinessSetup = () => {
               ) : (
                 <button
                   type="submit"
+                  onClick={() => {
+                    router.push('/dashboard'); // Redirect to dashboard after submission
+                  }}
                   className="flex items-center px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                 >
                   Complete Setup
