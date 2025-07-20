@@ -14,6 +14,8 @@ import {
 import { FcGoogle } from 'react-icons/fc';
 import { motion } from 'framer-motion';
 import {useRouter} from 'next/navigation';
+
+import { loginUser, signUpUser } from "@/services/authService"; // Adjust the import path as needed
 const AuthForms = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +29,9 @@ const AuthForms = () => {
     remember: false,
     terms: false
   });
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+
 
 const router = useRouter();
 
@@ -43,17 +48,42 @@ const router = useRouter();
     }));
   };
 
-  const handleSubmit = (e) => {
-  e.preventDefault();
-  if (isLogin) {
-    // Handle login logic here (API call, validation, etc.)
-    // Then navigate to dashboard
-    router.push('/setupbusiness');
-  } else {
-    // Handle signup logic
-    console.log('Signup form submitted');
-  }
-};
+   const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      if (isLogin) {
+        // Handle login
+        const { email, password} = formData;
+        const response = await loginUser({ email, password });
+        
+        // Store token or user data as needed
+        localStorage.setItem('authToken', response.token);
+        
+        // Navigate to dashboard
+        router.push('/setupbusiness');
+      } else {
+        // Handle signup
+        if (formData.password !== formData.confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+
+        const { name, email, phone, password } = formData;
+        const response = await signUpUser({ name, email, phone, password });
+        
+        // Optionally auto-login after signup
+        localStorage.setItem('authToken', response.token);
+        router.push('/setupbusiness');
+      }
+    } catch (err) {
+      setError(err.message || 'An error occurred. Please try again.');
+      console.error('Authentication error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 flex items-center justify-center p-4">
