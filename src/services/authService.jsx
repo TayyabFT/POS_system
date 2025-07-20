@@ -24,7 +24,7 @@ export const loginUser = async (credentials) => {
 
 export const signUpUser = async (userData) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/signup`, {
+    const response = await fetch(`${API_BASE_URL}/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

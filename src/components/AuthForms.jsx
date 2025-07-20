@@ -19,13 +19,13 @@ import { loginUser, signUpUser } from "@/services/authService"; // Adjust the im
 const AuthForms = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showconfirm_password, setShowconfirm_password] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
-    phone: '',
+    phone_number: '',
     password: '',
-    confirmPassword: '',
+    confirm_password: '',
     remember: false,
     terms: false
   });
@@ -66,13 +66,13 @@ const router = useRouter();
         router.push('/setupbusiness');
       } else {
         // Handle signup
-        if (formData.password !== formData.confirmPassword) {
+        if (formData.password !== formData.confirm_password) {
           throw new Error('Passwords do not match');
         }
 
-        const { name, email, phone, password } = formData;
-        const response = await signUpUser({ name, email, phone, password });
-        
+        const { full_name, email, phone_number, password, confirm_password } = formData;
+        const response = await signUpUser({ full_name, email, phone_number, password, confirm_password });
+
         // Optionally auto-login after signup
         localStorage.setItem('authToken', response.token);
         router.push('/setupbusiness');
@@ -143,9 +143,9 @@ const router = useRouter();
                   </div>
                   <input
                     type="text"
-                    name="name"
+                    name="full_name"
                     placeholder="Full Name"
-                    value={formData.name}
+                    value={formData.full_name}
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 bg-white/70 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     required
@@ -174,7 +174,7 @@ const router = useRouter();
                 />
               </motion.div>
 
-              {/* Phone Field (Signup Only) */}
+              {/* phone_number Field (Signup Only) */}
               {!isLogin && (
                 <motion.div
                   initial={{ opacity: 0, x: -20 }}
@@ -187,9 +187,9 @@ const router = useRouter();
                   </div>
                   <input
                     type="tel"
-                    name="phone"
-                    placeholder="Phone Number"
-                    value={formData.phone}
+                    name="phone_number"
+                    placeholder="phone_number Number"
+                    value={formData.phone_number}
                     onChange={handleChange}
                     className="w-full pl-10 pr-4 py-3 bg-white/70 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                   />
@@ -236,20 +236,20 @@ const router = useRouter();
                     <FiLock className="text-gray-400" />
                   </div>
                   <input
-                    type={showConfirmPassword ? "text" : "password"}
-                    name="confirmPassword"
+                    type={showconfirm_password ? "text" : "password"}
+                    name="confirm_password"
                     placeholder="Confirm Password"
-                    value={formData.confirmPassword}
+                    value={formData.confirm_password}
                     onChange={handleChange}
                     className="w-full pl-10 pr-10 py-3 bg-white/70 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
                     required
                   />
                   <button
                     type="button"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onClick={() => setShowconfirm_password(!showconfirm_password)}
                     className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
                   >
-                    {showConfirmPassword ? <FiEyeOff /> : <FiEye />}
+                    {showconfirm_password ? <FiEyeOff /> : <FiEye />}
                   </button>
                 </motion.div>
               )}
