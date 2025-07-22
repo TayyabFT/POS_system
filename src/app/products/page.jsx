@@ -30,6 +30,37 @@ import {
 } from 'react-icons/fi';
 import Image from 'next/image';
 
+// API Service Module (api.js)
+const API_BASE_URL = 'https://pso-crm.vercel.app';
+
+export const fetchCategories = async () => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/getcategory`);
+    if (!response.ok) throw new Error('Failed to fetch categories');
+    const result = await response.json();
+    return result.message || []; // Use result.message which contains the array
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return []; // Return empty array if error occurs
+  }
+};
+export const createCategory = async (categoryData) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/addcategory`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(categoryData),
+    });
+    if (!response.ok) throw new Error('Failed to create category');
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating category:', error);
+    throw error;
+  }
+};
+
 const mockProducts = [
   {
     id: 1,
@@ -88,6 +119,10 @@ const ProductPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
+  const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
   const [newProduct, setNewProduct] = useState({
     name: '',
     category: '',
@@ -100,15 +135,32 @@ const ProductPage = () => {
     description: '',
     barcode: ''
   });
+
+  const [newCategory, setNewCategory] = useState({
+    name: '',
+    description: ''
+  });
+
   const [errors, setErrors] = useState({});
+  const [categoryErrors, setCategoryErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(qrcodedemo);
 
   useEffect(() => {
-    setProducts(mockProducts);
+    const loadData = async () => {
+      try {
+        const [categoriesData] = await Promise.all([
+          fetchCategories()
+        ]);
+        setCategories(categoriesData);
+        setProducts(mockProducts);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadData();
   }, []);
-
-  const categories = [...new Set(mockProducts.map(p => p.category))];
-  const statuses = ['active', 'inactive'];
 
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -127,6 +179,12 @@ const ProductPage = () => {
     if (!newProduct.cost || isNaN(newProduct.cost)) newErrors.cost = 'Valid cost is required';
     if (!newProduct.stock || isNaN(newProduct.stock)) newErrors.stock = 'Valid stock quantity is required';
     if (!newProduct.sku) newErrors.sku = 'SKU is required';
+    return newErrors;
+  };
+
+  const validateCategoryForm = () => {
+    const newErrors = {};
+    if (!newCategory.name) newErrors.name = 'Category name is required';
     return newErrors;
   };
 
@@ -151,16 +209,56 @@ const ProductPage = () => {
     setIsAddProductModalOpen(false);
   };
 
+  const handleAddCategory = async () => {
+    const formErrors = validateCategoryForm();
+    if (Object.keys(formErrors).length > 0) {
+      setCategoryErrors(formErrors);
+      return;
+    }
+
+    try {
+      const createdCategory = await createCategory(newCategory);
+      setCategories([...categories, createdCategory]);
+      setNewProduct(prev => ({ ...prev, category: createdCategory.name }));
+      setNewCategory({ name: '', description: '' });
+      setIsAddCategoryModalOpen(false);
+    } catch (error) {
+      console.error('Error creating category:', error);
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setNewProduct({
       ...newProduct,
       [name]: value
     });
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors({
         ...errors,
+        [name]: null
+      });
+    }
+  };
+
+  const handleCategoryChange = (e) => {
+    const { value } = e.target;
+    if (value === 'new') {
+      setIsAddCategoryModalOpen(true);
+    } else {
+      handleInputChange(e);
+    }
+  };
+
+  const handleNewCategoryChange = (e) => {
+    const { name, value } = e.target;
+    setNewCategory({
+      ...newCategory,
+      [name]: value
+    });
+    if (categoryErrors[name]) {
+      setCategoryErrors({
+        ...categoryErrors,
         [name]: null
       });
     }
@@ -193,6 +291,14 @@ const ProductPage = () => {
     setImagePreview(qrcodedemo);
     setErrors({});
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50 items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -300,7 +406,7 @@ const ProductPage = () => {
             >
               <option value="all">All Categories</option>
               {categories.map(category => (
-                <option key={category} value={category}>{category}</option>
+                <option key={category.id} value={category.name}>{category.name}</option>
               ))}
             </select>
           </div>
@@ -313,11 +419,8 @@ const ProductPage = () => {
               onChange={(e) => setSelectedStatus(e.target.value)}
             >
               <option value="all">All Statuses</option>
-              {statuses.map(status => (
-                <option key={status} value={status}>
-                  {status.charAt(0).toUpperCase() + status.slice(1)}
-                </option>
-              ))}
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
             </select>
           </div>
         </div>
@@ -487,7 +590,7 @@ const ProductPage = () => {
 
       {/* Add Product Modal */}
       {isAddProductModalOpen && (
-        <div className="fixed inset-0 bg-transparent bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
@@ -604,12 +707,12 @@ const ProductPage = () => {
                       id="category"
                       name="category"
                       value={newProduct.category}
-                      onChange={handleInputChange}
+                      onChange={handleCategoryChange}
                       className={`mt-1 block w-full rounded-md border ${errors.category ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
                     >
                       <option value="">Select a category</option>
                       {categories.map(category => (
-                        <option key={category} value={category}>{category}</option>
+                        <option key={category.id} value={category.name}>{category.name}</option>
                       ))}
                       <option value="new">+ Add New Category</option>
                     </select>
@@ -710,6 +813,77 @@ const ProductPage = () => {
                   className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                 >
                   Add Product
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Category Modal */}
+      {isAddCategoryModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800">Add New Category</h2>
+                <button 
+                  onClick={() => setIsAddCategoryModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FiX className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="categoryName" className="block text-sm font-medium text-gray-700">
+                    Category Name *
+                  </label>
+                  <input
+                    type="text"
+                    id="categoryName"
+                    name="name"
+                    value={newCategory.name}
+                    onChange={handleNewCategoryChange}
+                    className={`mt-1 block w-full rounded-md border ${
+                      categoryErrors.name ? 'border-red-500' : 'border-gray-300'
+                    } shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
+                  />
+                  {categoryErrors.name && (
+                    <p className="mt-1 text-sm text-red-600">{categoryErrors.name}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label htmlFor="categoryDescription" className="block text-sm font-medium text-gray-700">
+                    Description
+                  </label>
+                  <textarea
+                    id="categoryDescription"
+                    name="description"
+                    value={newCategory.description}
+                    onChange={handleNewCategoryChange}
+                    rows={3}
+                    className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setIsAddCategoryModalOpen(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddCategory}
+                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Save Category
                 </button>
               </div>
             </div>

@@ -15,7 +15,7 @@ import { FcGoogle } from 'react-icons/fc';
 import { motion } from 'framer-motion';
 import {useRouter} from 'next/navigation';
 
-import { loginUser, signUpUser } from "@/services/authService"; // Adjust the import path as needed
+import { loginUser, signUpUser } from "@/services/authService"; 
 const AuthForms = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
