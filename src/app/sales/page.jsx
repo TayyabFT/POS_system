@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getSales, addNewSale } from "@/services/addSale";
 import {
   FiPieChart,
   FiEdit,
@@ -36,7 +37,6 @@ import {
   FiChevronRight
 } from 'react-icons/fi';
 import { IoQrCodeSharp } from "react-icons/io5";
-
 import { 
   LineChart, 
   Line, 
@@ -54,6 +54,9 @@ import {
 } from 'recharts';
 
 const SalesPage = () => {
+  // State management
+  const [salesData, setSalesData] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [dateRange, setDateRange] = useState('today');
@@ -62,8 +65,39 @@ const SalesPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortConfig, setSortConfig] = useState({ key: 'date', direction: 'desc' });
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [formData, setFormData] = useState({
+    invoice_id: '',
+    customer_name: '',
+    total_items: 1,
+    total_amount: 0,
+    payment_method: 'card',
+    status: 'completed'
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
-  // Sales overview data
+  // Fetch sales data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getSales();
+        setSalesData(data);
+        setError(null);
+      } catch (err) {
+        setError(err.message || 'Failed to load sales data');
+        setSalesData([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Sales overview data (could be fetched from server in a real app)
   const salesOverview = {
     totalToday: 2450.75,
     monthlySales: 18750.40,
@@ -77,91 +111,7 @@ const SalesPage = () => {
     monthlyChange: 8.2
   };
 
-  // Sales history data
-  const salesData = [
-    {
-      id: 1,
-      invoiceId: 'INV-1023',
-      date: '13 Jul 2025',
-      customer: 'John Doe',
-      items: 3,
-      total: 120.00,
-      paymentMethod: 'card',
-      status: 'completed'
-    },
-    {
-      id: 2,
-      invoiceId: 'INV-1024',
-      date: '12 Jul 2025',
-      customer: 'Sarah Smith',
-      items: 5,
-      total: 245.50,
-      paymentMethod: 'qr',
-      status: 'completed'
-    },
-    {
-      id: 3,
-      invoiceId: 'INV-1025',
-      date: '12 Jul 2025',
-      customer: 'Michael Johnson',
-      items: 2,
-      total: 89.99,
-      paymentMethod: 'cash',
-      status: 'completed'
-    },
-    {
-      id: 4,
-      invoiceId: 'INV-1026',
-      date: '11 Jul 2025',
-      customer: 'Emily Wilson',
-      items: 1,
-      total: 45.00,
-      paymentMethod: 'card',
-      status: 'refunded'
-    },
-    {
-      id: 5,
-      invoiceId: 'INV-1027',
-      date: '10 Jul 2025',
-      customer: 'David Brown',
-      items: 4,
-      total: 199.99,
-      paymentMethod: 'card',
-      status: 'completed'
-    },
-    {
-      id: 6,
-      invoiceId: 'INV-1028',
-      date: '09 Jul 2025',
-      customer: 'Lisa Taylor',
-      items: 2,
-      total: 75.50,
-      paymentMethod: 'qr',
-      status: 'completed'
-    },
-    {
-      id: 7,
-      invoiceId: 'INV-1029',
-      date: '08 Jul 2025',
-      customer: 'Robert Wilson',
-      items: 3,
-      total: 112.00,
-      paymentMethod: 'cash',
-      status: 'completed'
-    },
-    {
-      id: 8,
-      invoiceId: 'INV-1030',
-      date: '07 Jul 2025',
-      customer: 'Jennifer Lee',
-      items: 1,
-      total: 65.00,
-      paymentMethod: 'card',
-      status: 'pending'
-    }
-  ];
-
-  // Sales trend data
+  // Chart data (could be fetched from server in a real app)
   const salesTrendData = [
     { date: '01 Jul', sales: 1200 },
     { date: '02 Jul', sales: 1900 },
@@ -178,7 +128,6 @@ const SalesPage = () => {
     { date: '13 Jul', sales: 2600 }
   ];
 
-  // Payment type data
   const paymentTypeData = [
     { name: 'Card', value: salesOverview.paymentBreakdown.card },
     { name: 'Cash', value: salesOverview.paymentBreakdown.cash },
@@ -187,12 +136,70 @@ const SalesPage = () => {
 
   const COLORS = ['#3B82F6', '#10B981', '#6366F1'];
 
+  // Helper functions
+  const generateInvoiceId = () => {
+    const randomNum = Math.floor(Math.random() * 9000) + 1000;
+    return `INV-${randomNum}`;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'total_items' || name === 'total_amount' ? Number(value) : value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      // Validate form data
+      if (!formData.customer_name) {
+        throw new Error('Customer name is required');
+      }
+      if (formData.total_amount <= 0) {
+        throw new Error('Total amount must be greater than 0');
+      }
+
+      const finalFormData = {
+        ...formData,
+        invoice_id: formData.invoice_id || generateInvoiceId()
+      };
+
+      await addNewSale(finalFormData);
+      
+      // Refresh sales data after successful submission
+      const updatedSales = await getSales();
+      setSalesData(updatedSales);
+
+      setIsModalOpen(false);
+      setFormData({
+        invoice_id: '',
+        customer_name: '',
+        total_items: 1,
+        total_amount: 0,
+        payment_method: 'card',
+        status: 'completed'
+      });
+
+      setSuccessMessage('Sale added successfully!');
+    } catch (err) {
+      setError(err.message || 'Failed to add new sale');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Filter and sort sales data
   const filteredSales = salesData.filter(sale => {
     const matchesSearch = searchQuery === '' || 
       sale.invoiceId.toLowerCase().includes(searchQuery.toLowerCase()) || 
       sale.customer.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesPayment = paymentMethodFilter === 'all' || sale.paymentMethod === paymentMethodFilter;
+    const matchesPayment = paymentMethodFilter === 'all' || sale.payment_method === paymentMethodFilter;
     const matchesStatus = statusFilter === 'all' || sale.status === statusFilter;
     
     return matchesSearch && matchesPayment && matchesStatus;
@@ -239,7 +246,7 @@ const SalesPage = () => {
         <FiMenu className="w-6 h-6" />
       </button>
 
-      {/* Sidebar - Same as Dashboard */}
+      {/* Sidebar */}
       <aside className={`fixed md:relative z-40 w-64 bg-white text-gray-800 h-full transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-64 md:left-0'} shadow-lg`}>
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
           <div className="text-2xl font-bold flex items-center text-blue-600">
@@ -285,6 +292,20 @@ const SalesPage = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-hidden">
+        {/* Success Message */}
+        {successMessage && (
+          <div className="mb-4 p-4 bg-green-100 text-green-700 rounded-lg">
+            {successMessage}
+          </div>
+        )}
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-lg">
+            {error}
+          </div>
+        )}
+
         {/* Header */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
@@ -293,7 +314,10 @@ const SalesPage = () => {
           </div>
           
           <div className="flex items-center space-x-4 w-full md:w-auto">
-            <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
               <FiPlus className="mr-2" /> New Sale
             </button>
             <button className="p-2 rounded-full bg-white shadow-sm hover:bg-gray-100 relative">
@@ -486,6 +510,141 @@ const SalesPage = () => {
           </div>
         </div>
 
+        {/* Add New Sale Modal */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+              <div className="flex justify-between items-center p-4 border-b">
+                <h3 className="text-lg font-semibold">Add New Sale</h3>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FiX className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <form onSubmit={handleSubmit} className="p-4">
+                {error && (
+                  <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">
+                    {error}
+                  </div>
+                )}
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Invoice ID (leave blank to auto-generate)
+                    </label>
+                    <input
+                      type="text"
+                      name="invoice_id"
+                      value={formData.invoice_id}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      placeholder="e.g. INV-1234"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Customer Name
+                    </label>
+                    <input
+                      type="text"
+                      name="customer_name"
+                      value={formData.customer_name}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Number of Items
+                    </label>
+                    <input
+                      type="number"
+                      name="total_items"
+                      min="1"
+                      value={formData.total_items}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Total Amount ($)
+                    </label>
+                    <input
+                      type="number"
+                      name="total_amount"
+                      min="0.01"
+                      step="0.01"
+                      value={formData.total_amount}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Payment Method
+                    </label>
+                    <select
+                      name="payment_method"
+                      value={formData.payment_method}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="card">Card</option>
+                      <option value="cash">Cash</option>
+                      <option value="qr">QR Code</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    >
+                      <option value="completed">Completed</option>
+                      <option value="pending">Pending</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Saving...' : 'Save Sale'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
         {/* Sales History */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden hover:shadow-md transition-shadow mb-8">
           <div className="p-4 border-b border-gray-200 flex justify-between items-center">
@@ -582,13 +741,13 @@ const SalesPage = () => {
                     Customer {getSortIcon('customer')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => requestSort('items')}>
-                    Items {getSortIcon('items')}
+                    Items {getSortIcon('total_items')}
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => requestSort('total')}>
-                    Total {getSortIcon('total')}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => requestSort('total_amount')}>
+                    Total {getSortIcon('total_amount')}
                   </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => requestSort('paymentMethod')}>
-                    Payment Method {getSortIcon('paymentMethod')}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => requestSort('payment_method')}>
+                    Payment Method {getSortIcon('payment_method')}
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer" onClick={() => requestSort('status')}>
                     Status {getSortIcon('status')}
@@ -599,43 +758,52 @@ const SalesPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedSales.length > 0 ? (
+                {isLoading ? (
+                  <tr>
+                    <td colSpan="9" className="px-6 py-4 text-center">
+                      <div className="flex justify-center items-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+                      </div>
+                    </td>
+                  </tr>
+                ) : paginatedSales.length > 0 ? (
                   paginatedSales.map((sale) => (
                     <tr key={sale.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                         {sale.id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-medium">
-                        {sale.invoiceId}
+                        {sale.invoice_id}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {sale.date}
+                        {sale.created_at}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {sale.customer}
+                        {sale.customer_name}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {sale.items}
+                        {sale.total_items || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${sale.total.toFixed(2)}
+                      ${sale.total_amount ? Number(sale.total_amount).toFixed(2) : '0.00'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                         <div className="flex items-center">
-                          {sale.paymentMethod === 'card' && <FiCreditCard className="mr-1" />}
-                          {sale.paymentMethod === 'cash' && <FiCash className="mr-1" />}
-                          {sale.paymentMethod === 'qr' && <IoQrCodeSharp className="mr-1" />}
-                          {sale.paymentMethod.charAt(0).toUpperCase() + sale.paymentMethod.slice(1)}
+                          {sale.payment_method === 'Card' && <FiCreditCard className="mr-1" />}
+                          {sale.payment_method === 'Cash' && <FiCash className="mr-1" />}
+                          {sale.payment_method === 'QR Code' && <IoQrCodeSharp className="mr-1" />}
+                          {sale.payment_method || 'Unknown'}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          sale.status === 'completed' ? 'bg-green-100 text-green-800' :
-                          sale.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
-                        }`}>
-                          {sale.status.charAt(0).toUpperCase() + sale.status.slice(1)}
-                        </span>
-                      </td>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                        !sale.status ? 'bg-gray-100 text-gray-800' :
+                        sale.status.toLowerCase() === 'completed' ? 'bg-green-100 text-green-800' :
+                        sale.status.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {sale.status ? sale.status : 'Unknown'}
+                      </span>
+                    </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <button className="text-blue-600 hover:text-blue-900 mr-3">
                           <FiPrinter className="w-4 h-4" />
@@ -649,7 +817,7 @@ const SalesPage = () => {
                 ) : (
                   <tr>
                     <td colSpan="9" className="px-6 py-4 text-center text-sm text-gray-500">
-                      No sales found matching your criteria
+                      {error ? error : 'No sales found matching your criteria'}
                     </td>
                   </tr>
                 )}
@@ -662,14 +830,14 @@ const SalesPage = () => {
             <div className="flex-1 flex justify-between sm:hidden">
               <button 
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
+                disabled={currentPage === 1 || isLoading}
                 className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
               >
                 Previous
               </button>
               <button 
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
+                disabled={currentPage === totalPages || isLoading}
                 className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
               >
                 Next
@@ -687,7 +855,7 @@ const SalesPage = () => {
                 <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
+                    disabled={currentPage === 1 || isLoading}
                     className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                   >
                     <span className="sr-only">Previous</span>
@@ -697,18 +865,19 @@ const SalesPage = () => {
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
+                      disabled={isLoading}
                       className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                         currentPage === page 
                           ? 'z-10 bg-blue-50 border-blue-500 text-blue-600' 
                           : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                      }`}
+                      } ${isLoading ? 'opacity-50' : ''}`}
                     >
                       {page}
                     </button>
                   ))}
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
+                    disabled={currentPage === totalPages || isLoading}
                     className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                   >
                     <span className="sr-only">Next</span>
@@ -754,28 +923,34 @@ const SalesPage = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  <tr>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      INV-1026
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      11 Jul 2025
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      Emily Wilson
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      $45.00
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      Wrong item
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                        Completed
-                      </span>
-                    </td>
-                  </tr>
+                  {salesData
+                    .filter(sale => sale.status === 'refunded')
+                    .map((sale) => (
+                      <tr key={sale.id}>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {sale.invoice_id}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {sale.created_at}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {sale.customer_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          ${sale.total_amount.toFixed(2)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {/* You might want to add a reason field to your data */}
+                          Wrong item
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                            Refunded
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  }
                 </tbody>
               </table>
             </div>

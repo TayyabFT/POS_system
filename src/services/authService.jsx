@@ -1,5 +1,5 @@
 const API_BASE_URL = 'https://pso-crm.vercel.app'; // Update with your actual API base URL
-console.log("here");
+
 export const loginUser = async (credentials) => {
   try {
     const response = await fetch(`${API_BASE_URL}/login`, {
