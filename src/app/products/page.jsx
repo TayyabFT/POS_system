@@ -155,6 +155,54 @@ export const addProduct = async (productData, userId) => {
 
 
 
+
+
+export const updateProduct = async (productId, productData, userId) => {
+  try {
+    const formData = new FormData();
+    
+    // Append all fields
+    formData.append('product_name', productData.product_name);
+    formData.append('description', productData.description || '');
+    formData.append('sku', productData.sku);
+    formData.append('barcode', productData.barcode || '');
+    formData.append('category_name', productData.category_name);
+    formData.append('price', productData.price.toString());
+    formData.append('cost', productData.cost.toString());
+    formData.append('stock', productData.stock.toString());
+    formData.append('status', productData.status);
+    
+    // Only append image if a new one was selected
+    if (productData.image && productData.image instanceof File) {
+      formData.append('image', productData.image);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/updateproduct/${productId}`, {
+      method: 'PUT', // or 'PATCH' depending on your API
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || 'Failed to update product');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error updating product:', {
+      productId,
+      error: error.message,
+      productData
+    });
+    throw error;
+  }
+};
+
+
+
+
+
+
 export const deleteProduct = async (productId, userId) => {
   try {
     const response = await fetch(`${API_BASE_URL}/deleteproduct/${productId}`, {
@@ -296,7 +344,15 @@ export const fetchProducts = async (userId) => {
 
   const handleAddProduct = async () => {
   try {
-    const productToAdd = {
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    const productData = {
       product_name: newProduct.product_name,
       description: newProduct.description,
       sku: newProduct.sku,
@@ -306,19 +362,34 @@ export const fetchProducts = async (userId) => {
       cost: newProduct.cost,
       stock: newProduct.stock,
       status: newProduct.status,
-      image: imageFile // The actual File object from input
+      image: imageFile
     };
 
-    const response = await addProduct(productToAdd, userId);
-    
-    // Handle success
-    setProducts([...products, response.data]);
-    setIsAddProductModalOpen(false);
-    alert('Product added successfully!');
+    let response;
+    if (isEditMode) {
+      // Update existing product
+      response = await updateProduct(currentProductId, productData, userId);
+      
+      // Update the products list
+      setProducts(products.map(p => 
+        p.id === currentProductId ? { ...p, ...response.data } : p
+      ));
+      
+      alert('Product updated successfully!');
+    } else {
+      // Create new product
+      response = await addProduct(productData, userId);
+      setProducts([...products, response.data]);
+      alert('Product added successfully!');
+    }
 
+    resetForm();
+    setIsAddProductModalOpen(false);
   } catch (error) {
-    // Show user-friendly error message
-    alert(`Error: ${error.message}`);
+    console.error('Error saving product:', error);
+    alert(`Failed to ${isEditMode ? 'update' : 'add'} product: ${error.message}`);
+  } finally {
+    setIsSubmitting(false);
   }
 };
 
@@ -337,23 +408,32 @@ export const fetchProducts = async (userId) => {
     }
   };
 
-  const handleEditProduct = (product) => {
-    setNewProduct({
-      product_name: product.product_name,
-      category_name: product.category_name,
-      price: product.price.toString(),
-      cost: product.cost.toString(),
-      stock: product.stock.toString(),
-      status: product.status,
-      sku: product.sku,
-      description: product.description || '',
-      barcode: product.barcode || ''
-    });
+const handleEditProduct = (product) => {
+  setNewProduct({
+    product_name: product.name || '',
+    description: product.description || '',
+    sku: product.sku || '',
+    barcode: product.barcode || '',
+    category_name: product.category_name || '',
+    price: product.price?.toString() || '',
+    cost: product.cost?.toString() || '',
+    stock: product.stock?.toString() || '',
+    status: product.status || 'Active',
+  });
+  
+  // Set the current product ID being edited
+  setCurrentProductId(product.id);
+  
+  // Set image preview if exists
+  if (product.image) {
     setImagePreview(product.image);
-    setIsEditMode(true);
-    setCurrentProductId(product.id);
-    setIsAddProductModalOpen(true);
-  };
+  } else {
+    setImagePreview(null);
+  }
+  
+  setIsEditMode(true);
+  setIsAddProductModalOpen(true);
+};
 
   const handleAddCategory = async () => {
     const formErrors = validateCategoryForm();
