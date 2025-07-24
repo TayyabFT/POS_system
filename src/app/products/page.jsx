@@ -264,9 +264,14 @@ export const fetchProducts = async (userId) => {
   const filteredProducts = products.filter(product => {
   const matchesSearch = product.name?.toLowerCase().includes(search.toLowerCase()) || 
                        product.sku?.toLowerCase().includes(search.toLowerCase());
-  const matchesCategory = selectedCategory === 'all' || product.category_name === selectedCategory;
+  
+  const matchesCategory = selectedCategory === 'all' || 
+                        product.category_name === selectedCategory;
+  
+  // Updated status filter with case-insensitive comparison
   const matchesStatus = selectedStatus === 'all' || 
-                       (product.status && product.status.toLowerCase() === selectedStatus);
+                       (product.status && 
+                        product.status.toLowerCase() === selectedStatus.toLowerCase());
   
   return matchesSearch && matchesCategory && matchesStatus;
 });
