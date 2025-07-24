@@ -13,7 +13,7 @@ const LandingPage = () => {
   const [isVideoOpen, setIsVideoOpen] = useState(false);
 const router = useRouter();
   const handleLogin = () => {
-    router.push('/login');
+    router.push('/dashboard');
   };
 
   const features = [
