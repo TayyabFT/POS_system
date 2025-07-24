@@ -60,7 +60,7 @@ const router = useRouter();
         const response = await loginUser({ email, password });
         
         // Store token or user data as needed
-        localStorage.setItem('authToken', response.token);
+        localStorage.setItem('userid', response.message.user_id);
         
         // Navigate to dashboard
         router.push('/setupbusiness');

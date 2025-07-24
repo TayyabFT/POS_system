@@ -30,7 +30,7 @@ import {
 } from 'react-icons/fi';
 import Image from 'next/image';
 
-// API Service Module (api.js)
+// API Service Module
 const API_BASE_URL = 'https://pso-crm.vercel.app';
 
 export const fetchCategories = async () => {
@@ -38,81 +38,166 @@ export const fetchCategories = async () => {
     const response = await fetch(`${API_BASE_URL}/getcategory`);
     if (!response.ok) throw new Error('Failed to fetch categories');
     const result = await response.json();
-    return result.message || []; // Use result.message which contains the array
+    return result.message || [];
   } catch (error) {
     console.error('Error fetching categories:', error);
-    return []; // Return empty array if error occurs
+    return [];
   }
 };
-export const createCategory = async (categoryData) => {
+
+export const addProduct = async (productData, userId) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/addcategory`, {
+    // Validate required fields
+    const requiredFields = {
+      'Product name': productData.product_name?.trim(),
+      'SKU': productData.sku?.trim(),
+      'Price': productData.price,
+      'Cost': productData.cost,
+      'Stock': productData.stock,
+      'Category': productData.category_name
+    };
+
+    const missingFields = Object.entries(requiredFields)
+      .filter(([_, value]) => !value)
+      .map(([name]) => name);
+
+    if (missingFields.length > 0) {
+      throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
+    }
+
+    if (!productData.image) {
+      throw new Error('Product image is required');
+    }
+
+    const formData = new FormData();
+    
+    // Append all fields
+    formData.append('product_name', productData.product_name);
+    formData.append('sku', productData.sku);
+    formData.append('price', productData.price.toString());
+    formData.append('cost', productData.cost.toString());
+    formData.append('stock', productData.stock.toString());
+    formData.append('category_name', productData.category_name);
+    
+    // Optional fields
+    if (productData.description) formData.append('description', productData.description);
+    if (productData.barcode) formData.append('barcode', productData.barcode);
+    if (productData.status) formData.append('status', productData.status);
+    
+    formData.append('image', productData.image);
+
+    // Debug: Log FormData contents
+    console.log('FormData contents:');
+    for (let [key, value] of formData.entries()) {
+      console.log(key, value instanceof File ? `${value.name} (${value.type}, ${value.size} bytes)` : value);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/addproduct/${userId}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(categoryData),
+      body: formData,
     });
-    if (!response.ok) throw new Error('Failed to create category');
-    return await response.json();
+
+    // Handle non-JSON responses
+    let responseData;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      responseData = await response.json();
+    } else {
+      const text = await response.text();
+      try {
+        responseData = JSON.parse(text);
+      } catch {
+        responseData = { message: text };
+      }
+    }
+
+    if (!response.ok) {
+      console.error('Backend error response:', {
+        status: response.status,
+        data: responseData
+      });
+      
+      if (response.status === 409) {
+        throw new Error('A product with this SKU already exists');
+      }
+      if (response.status === 404) {
+        if (responseData.message?.includes('User not found')) {
+          throw new Error('Your account was not found. Please log in again.');
+        }
+        if (responseData.message?.includes('Category not found')) {
+          throw new Error('The selected category does not exist');
+        }
+      }
+      throw new Error(responseData.message || `Server error (status ${response.status})`);
+    }
+
+    return responseData;
+
   } catch (error) {
-    console.error('Error creating category:', error);
+    console.error('Full error details:', {
+      error: error.message,
+      stack: error.stack,
+      requestData: {
+        product_name: productData.product_name,
+        sku: productData.sku,
+        category_name: productData.category_name,
+        image: productData.image?.name || 'None'
+      }
+    });
+    
+    // Re-throw with user-friendly message if not already set
+    if (error instanceof TypeError) {
+      throw new Error('Network error. Please check your connection.');
+    }
     throw error;
   }
 };
 
-const mockProducts = [
-  {
-    id: 1,
-    name: 'Latte Cup',
-    category: 'Beverages',
-    price: 5.5,
-    cost: 2.3,
-    stock: 45,
-    status: 'active',
-    sku: 'LC-001',
-    image: qrcodedemo,
-    description: 'Premium quality latte cup'
-  },
-  {
-    id: 2,
-    name: 'Hair Gel',
-    category: 'Beauty',
-    price: 12.99,
-    cost: 6.5,
-    stock: 12,
-    status: 'inactive',
-    sku: 'HG-045',
-    image: qrcodedemo,
-    description: 'Strong hold hair styling gel'
-  },
-  {
-    id: 3,
-    name: 'Wireless Earbuds',
-    category: 'Electronics',
-    price: 89.99,
-    cost: 45.0,
-    stock: 23,
-    status: 'active',
-    sku: 'WE-112',
-    image: qrcodedemo,
-    description: 'Noise cancelling wireless earbuds'
-  },
-  {
-    id: 4,
-    name: 'Organic Cotton T-Shirt',
-    category: 'Apparel',
-    price: 24.99,
-    cost: 12.5,
-    stock: 56,
-    status: 'active',
-    sku: 'TS-789',
-    image: qrcodedemo,
-    description: '100% organic cotton t-shirt'
-  },
-];
 
-const ProductPage = () => {
+
+export const deleteProduct = async (productId, userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/deleteproduct/${productId}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to delete product');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    throw error;
+  }
+};
+
+export const fetchProducts = async (userId) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/getproducts`);
+    if (!response.ok) throw new Error('Failed to fetch products');
+    const data = await response.json();
+    return (data.message || []).map(product => ({
+      id: product.id,
+      name: product.product_name,
+      description: product.description,
+      sku: product.sku,
+      barcode: product.barcode,
+      price: parseFloat(product.price),
+      cost: parseFloat(product.cost),
+      stock: product.stock,
+      status: product.status,
+      image: product.image_url,
+      category_name: product.category_name
+    }));
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    return [];
+  }
+};
+
+
+  const ProductPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
@@ -122,18 +207,21 @@ const ProductPage = () => {
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [currentProductId, setCurrentProductId] = useState(null);
   
   const [newProduct, setNewProduct] = useState({
-    name: '',
-    category: '',
+    product_name: '',
+    description: '',
+    sku: '',
+    barcode: '',
+    category_name: '',
     price: '',
     cost: '',
     stock: '',
-    status: 'active',
-    sku: '',
-    image: qrcodedemo,
-    description: '',
-    barcode: ''
+    status: 'Active',
   });
 
   const [newCategory, setNewCategory] = useState({
@@ -143,18 +231,29 @@ const ProductPage = () => {
 
   const [errors, setErrors] = useState({});
   const [categoryErrors, setCategoryErrors] = useState({});
-  const [imagePreview, setImagePreview] = useState(qrcodedemo);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
 
   useEffect(() => {
     const loadData = async () => {
       try {
-        const [categoriesData] = await Promise.all([
-          fetchCategories()
+        const storedUserId = localStorage.getItem('userid');
+        if (!storedUserId) {
+          throw new Error('User not authenticated');
+        }
+        setUserId(storedUserId);
+
+        const [categoriesData, productsData] = await Promise.all([
+          fetchCategories(),
+          fetchProducts(storedUserId)
         ]);
+        
         setCategories(categoriesData);
-        setProducts(mockProducts);
+        setProducts(productsData);
       } catch (error) {
         console.error('Error loading data:', error);
+        alert('Please login to access this page');
+        window.location.href = '/login';
       } finally {
         setIsLoading(false);
       }
@@ -163,22 +262,24 @@ const ProductPage = () => {
   }, []);
 
   const filteredProducts = products.filter(product => {
-    const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase()) || 
-                         product.sku.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-    const matchesStatus = selectedStatus === 'all' || product.status === selectedStatus;
-    
-    return matchesSearch && matchesCategory && matchesStatus;
-  });
+  const matchesSearch = product.name?.toLowerCase().includes(search.toLowerCase()) || 
+                       product.sku?.toLowerCase().includes(search.toLowerCase());
+  const matchesCategory = selectedCategory === 'all' || product.category_name === selectedCategory;
+  const matchesStatus = selectedStatus === 'all' || 
+                       (product.status && product.status.toLowerCase() === selectedStatus);
+  
+  return matchesSearch && matchesCategory && matchesStatus;
+});
 
   const validateForm = () => {
     const newErrors = {};
-    if (!newProduct.name) newErrors.name = 'Product name is required';
-    if (!newProduct.category) newErrors.category = 'Category is required';
+    if (!newProduct.product_name) newErrors.product_name = 'Product name is required';
+    if (!newProduct.category_name) newErrors.category_name = 'Category is required';
     if (!newProduct.price || isNaN(newProduct.price)) newErrors.price = 'Valid price is required';
     if (!newProduct.cost || isNaN(newProduct.cost)) newErrors.cost = 'Valid cost is required';
     if (!newProduct.stock || isNaN(newProduct.stock)) newErrors.stock = 'Valid stock quantity is required';
     if (!newProduct.sku) newErrors.sku = 'SKU is required';
+    // if (!isEditMode && !imageFile) newErrors.image = 'Product image is required';
     return newErrors;
   };
 
@@ -188,25 +289,65 @@ const ProductPage = () => {
     return newErrors;
   };
 
-  const handleAddProduct = () => {
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
+  const handleAddProduct = async () => {
+  try {
+    const productToAdd = {
+      product_name: newProduct.product_name,
+      description: newProduct.description,
+      sku: newProduct.sku,
+      barcode: newProduct.barcode,
+      category_name: newProduct.category_name,
+      price: newProduct.price,
+      cost: newProduct.cost,
+      stock: newProduct.stock,
+      status: newProduct.status,
+      image: imageFile // The actual File object from input
+    };
+
+    const response = await addProduct(productToAdd, userId);
+    
+    // Handle success
+    setProducts([...products, response.data]);
+    setIsAddProductModalOpen(false);
+    alert('Product added successfully!');
+
+  } catch (error) {
+    // Show user-friendly error message
+    alert(`Error: ${error.message}`);
+  }
+};
+
+  const handleDeleteProduct = async (productId) => {
+    if (!window.confirm('Are you sure you want to delete this product?')) {
       return;
     }
 
-    const productToAdd = {
-      ...newProduct,
-      id: products.length + 1,
-      price: parseFloat(newProduct.price),
-      cost: parseFloat(newProduct.cost),
-      stock: parseInt(newProduct.stock),
-      image: imagePreview
-    };
-    
-    setProducts([...products, productToAdd]);
-    resetForm();
-    setIsAddProductModalOpen(false);
+    try {
+      await deleteProduct(productId, userId);
+      setProducts(products.filter(product => product.id !== productId));
+      alert('Product deleted successfully!');
+    } catch (error) {
+      console.error('Error deleting product:', error);
+      alert('Failed to delete product. Please try again.');
+    }
+  };
+
+  const handleEditProduct = (product) => {
+    setNewProduct({
+      product_name: product.product_name,
+      category_name: product.category_name,
+      price: product.price.toString(),
+      cost: product.cost.toString(),
+      stock: product.stock.toString(),
+      status: product.status,
+      sku: product.sku,
+      description: product.description || '',
+      barcode: product.barcode || ''
+    });
+    setImagePreview(product.image);
+    setIsEditMode(true);
+    setCurrentProductId(product.id);
+    setIsAddProductModalOpen(true);
   };
 
   const handleAddCategory = async () => {
@@ -265,31 +406,43 @@ const ProductPage = () => {
   };
 
   const handleImageChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result);
-      };
-      reader.readAsDataURL(file);
+  const file = e.target.files[0];
+  if (file) {
+    // Validate image
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors({...errors, image: 'Image must be smaller than 5MB'});
+      return;
     }
-  };
-
+    if (!['image/jpeg', 'image/png'].includes(file.type)) {
+      setErrors({...errors, image: 'Only JPEG/PNG images allowed'});
+      return;
+    }
+    
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setImagePreview(reader.result);
+    };
+    reader.readAsDataURL(file);
+  }
+};
   const resetForm = () => {
     setNewProduct({
-      name: '',
-      category: '',
+      product_name: '',
+      category_name: '',
       price: '',
       cost: '',
       stock: '',
-      status: 'active',
+      status: 'Active',
       sku: '',
-      image: qrcodedemo,
       description: '',
       barcode: ''
     });
-    setImagePreview(qrcodedemo);
+    setImagePreview(null);
+    setImageFile(null);
     setErrors({});
+    setIsEditMode(false);
+    setCurrentProductId(null);
   };
 
   if (isLoading) {
@@ -365,7 +518,10 @@ const ProductPage = () => {
           
           <div className="flex items-center space-x-4 w-full md:w-auto">
             <button 
-              onClick={() => setIsAddProductModalOpen(true)}
+              onClick={() => {
+                resetForm();
+                setIsAddProductModalOpen(true);
+              }}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <FiPlus className="mr-2" /> Add Product
@@ -419,8 +575,8 @@ const ProductPage = () => {
               onChange={(e) => setSelectedStatus(e.target.value)}
             >
               <option value="all">All Statuses</option>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
             </select>
           </div>
         </div>
@@ -471,7 +627,7 @@ const ProductPage = () => {
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
                           <Image
-                            src={product.image}
+                            src={product.image || qrcodedemo}
                             width={40}
                             height={40}
                             alt={product.name}
@@ -488,7 +644,7 @@ const ProductPage = () => {
                       {product.sku}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {product.category}
+                      {product.category_name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                       ${product.price.toFixed(2)}
@@ -506,16 +662,22 @@ const ProductPage = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        product.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
                         {product.status.charAt(0).toUpperCase() + product.status.slice(1)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button className="text-blue-600 hover:text-blue-900 mr-3">
+                      <button 
+                        onClick={() => handleEditProduct(product)}
+                        className="text-blue-600 hover:text-blue-900 mr-3"
+                      >
                         <FiEdit className="w-4 h-4" />
                       </button>
-                      <button className="text-red-600 hover:text-red-900">
+                      <button 
+                        onClick={() => handleDeleteProduct(product.id)}
+                        className="text-red-600 hover:text-red-900"
+                      >
                         <FiTrash className="w-4 h-4" />
                       </button>
                     </td>
@@ -588,13 +750,15 @@ const ProductPage = () => {
         </div>
       </main>
 
-      {/* Add Product Modal */}
+      {/* Add/Edit Product Modal */}
       {isAddProductModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-gray-300 bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-800">Add New Product</h2>
+                <h2 className="text-xl font-bold text-gray-800">
+                  {isEditMode ? 'Edit Product' : 'Add New Product'}
+                </h2>
                 <button 
                   onClick={() => {
                     setIsAddProductModalOpen(false);
@@ -611,18 +775,18 @@ const ProductPage = () => {
                 <div className="space-y-4">
                   {/* Product Image */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Product Image {!isEditMode && '*'}
+                    </label>
                     <div className="flex items-center justify-center w-full">
                       <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
                         <div className="flex flex-col items-center justify-center pt-5 pb-6">
                           {imagePreview ? (
                             <div className="relative w-full h-full">
-                              <Image
+                              <img
                                 src={imagePreview}
                                 alt="Product preview"
-                                layout="fill"
-                                objectFit="contain"
-                                className="rounded-lg"
+                                className="w-full h-full object-contain rounded-lg"
                               />
                             </div>
                           ) : (
@@ -642,6 +806,7 @@ const ProductPage = () => {
                         />
                       </label>
                     </div>
+                    {errors.image && <p className="mt-1 text-sm text-red-600">{errors.image}</p>}
                   </div>
 
                   {/* Basic Information */}
@@ -650,7 +815,7 @@ const ProductPage = () => {
                     <input
                       type="text"
                       id="name"
-                      name="name"
+                      name="product_name"
                       value={newProduct.name}
                       onChange={handleInputChange}
                       className={`mt-1 block w-full rounded-md border ${errors.name ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
@@ -705,10 +870,10 @@ const ProductPage = () => {
                     <label htmlFor="category" className="block text-sm font-medium text-gray-700">Category *</label>
                     <select
                       id="category"
-                      name="category"
-                      value={newProduct.category}
+                      name="category_name"
+                      value={newProduct.category_name}
                       onChange={handleCategoryChange}
-                      className={`mt-1 block w-full rounded-md border ${errors.category ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
+                      className={`mt-1 block w-full rounded-md border ${errors.category_name ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
                     >
                       <option value="">Select a category</option>
                       {categories.map(category => (
@@ -716,7 +881,7 @@ const ProductPage = () => {
                       ))}
                       <option value="new">+ Add New Category</option>
                     </select>
-                    {errors.category && <p className="mt-1 text-sm text-red-600">{errors.category}</p>}
+                    {errors.category_name && <p className="mt-1 text-sm text-red-600">{errors.category_name}</p>}
                   </div>
 
                   {/* Pricing */}
@@ -787,8 +952,8 @@ const ProductPage = () => {
                         onChange={handleInputChange}
                         className="mt-1 block w-full rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
                       >
-                        <option value="active">Active</option>
-                        <option value="inactive">Inactive</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
                       </select>
                     </div>
                   </div>
@@ -810,9 +975,10 @@ const ProductPage = () => {
                 <button
                   type="button"
                   onClick={handleAddProduct}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  disabled={isSubmitting}
+                  className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  Add Product
+                  {isSubmitting ? (isEditMode ? 'Updating...' : 'Adding...') : (isEditMode ? 'Update Product' : 'Add Product')}
                 </button>
               </div>
             </div>
