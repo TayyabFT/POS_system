@@ -23,7 +23,9 @@ import {
   FiSearch,
   FiChevronDown,
   FiCalendar,
-  FiRefreshCw
+  FiRefreshCw,
+  FiDownload,
+  FiFilter
 } from "react-icons/fi";
 import { 
   LineChart, 
@@ -38,45 +40,53 @@ import {
   PieChart, 
   Pie, 
   Cell,
-  ResponsiveContainer 
+  ResponsiveContainer,
+  AreaChart,
+  Area
 } from "recharts";
 
-const DashboardPage = () => {
+const ReportsPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("today");
+  const [activeReport, setActiveReport] = useState("sales");
   const router = useRouter();
+  
   const salesData = [
-    { month: "Feb", sales: 2400, purchases: 1400 },
-    { month: "Mar", sales: 3800, purchases: 2000 },
-    { month: "Apr", sales: 2200, purchases: 1800 },
-    { month: "May", sales: 3400, purchases: 2900 },
-    { month: "Jun", sales: 3000, purchases: 2500 },
-    { month: "Jul", sales: 3200, purchases: 2700 },
+    { month: "Feb", sales: 2400, profit: 1400 },
+    { month: "Mar", sales: 3800, profit: 2000 },
+    { month: "Apr", sales: 2200, profit: 1800 },
+    { month: "May", sales: 3400, profit: 2900 },
+    { month: "Jun", sales: 3000, profit: 2500 },
+    { month: "Jul", sales: 3200, profit: 2700 },
   ];
 
-  const pieData = [
-    { name: "iOS", value: 400 },
-    { name: "MacBook", value: 300 },
-    { name: "Smart TV", value: 300 },
-    { name: "Tesla Model S", value: 200 },
-    { name: "Google Pixel", value: 100 },
-  ];
-
-  const recentTransactions = [
-    { id: 1, customer: "John Doe", amount: 249.99, status: "completed", date: "2023-07-15" },
-    { id: 2, customer: "Sarah Smith", amount: 129.99, status: "pending", date: "2023-07-14" },
-    { id: 3, customer: "Michael Johnson", amount: 89.99, status: "completed", date: "2023-07-14" },
-    { id: 4, customer: "Emily Wilson", amount: 199.99, status: "failed", date: "2023-07-13" },
-    { id: 5, customer: "David Brown", amount: 59.99, status: "completed", date: "2023-07-12" },
+  const categoryData = [
+    { name: "Electronics", value: 4000 },
+    { name: "Clothing", value: 3000 },
+    { name: "Food", value: 2000 },
+    { name: "Books", value: 1500 },
+    { name: "Toys", value: 1000 },
   ];
 
   const COLORS = ["#3B82F6", "#6366F1", "#10B981", "#F59E0B", "#EF4444"];
 
-  const statusStyles = {
-    completed: "bg-green-100 text-green-800",
-    pending: "bg-yellow-100 text-yellow-800",
-    failed: "bg-red-100 text-red-800"
-  };
+  const dailySalesData = [
+    { day: "Mon", sales: 1200 },
+    { day: "Tue", sales: 1900 },
+    { day: "Wed", sales: 1500 },
+    { day: "Thu", sales: 2200 },
+    { day: "Fri", sales: 2500 },
+    { day: "Sat", sales: 1800 },
+    { day: "Sun", sales: 1400 },
+  ];
+
+  const topSellingProducts = [
+    { id: 1, name: "iPhone 13 Pro", sales: 245, revenue: 294000, growth: 12.5 },
+    { id: 2, name: "MacBook Air M1", sales: 187, revenue: 224400, growth: 8.3 },
+    { id: 3, name: "Samsung Smart TV", sales: 134, revenue: 120600, growth: 5.7 },
+    { id: 4, name: "AirPods Pro", sales: 219, revenue: 43800, growth: 15.2 },
+    { id: 5, name: "iPad Air", sales: 92, revenue: 55200, growth: -2.1 },
+  ];
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -103,19 +113,19 @@ const DashboardPage = () => {
         </div>
         
         <nav className="p-4 space-y-1">
-          <div className="flex items-center space-x-3 p-3 rounded-lg bg-blue-100 text-blue-600 font-semibold">
+          <div onClick={() => router.push('/dashboard')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiPieChart className="w-5 h-5" /> <span>Dashboard</span>
           </div>
-          <a onClick={() => router.push('/products')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <div onClick={() => router.push('/products')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiPackage className="w-5 h-5" /> <span>Products</span>
-          </a>
-          <div onClick={()=>router.push('/sales')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          </div>
+          <div onClick={() => router.push('/sales')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiShoppingBag className="w-5 h-5" /> <span>Sales</span>
           </div>
           <div onClick={() => router.push('/invoice')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiClipboard className="w-5 h-5" /> <span>Invoices</span>
           </div>
-          <div onClick={() => router.push('/reports')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <div className="flex items-center space-x-3 p-3 rounded-lg bg-blue-100 text-blue-600 font-semibold">
             <FiBarChart2 className="w-5 h-5" /> <span>Reports</span>
           </div>
           <div onClick={() => router.push('/customers')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
@@ -137,8 +147,8 @@ const DashboardPage = () => {
         {/* Header */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Dashboard Overview</h1>
-            <p className="text-gray-600">Welcome back! Here's what's happening with your business today.</p>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Reports</h1>
+            <p className="text-gray-600">Analyze your business performance with detailed reports.</p>
           </div>
           
           <div className="flex items-center space-x-4 w-full md:w-auto">
@@ -146,7 +156,7 @@ const DashboardPage = () => {
               <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
               <input 
                 type="text" 
-                placeholder="Search..." 
+                placeholder="Search reports..." 
                 className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -163,6 +173,37 @@ const DashboardPage = () => {
             </div>
           </div>
         </header>
+
+        {/* Report Type Selection */}
+        <div className="mb-8">
+          <div className="flex flex-wrap gap-3 bg-white p-2 rounded-lg shadow-sm inline-block">
+            <button 
+              onClick={() => setActiveReport("sales")}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${activeReport === "sales" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+            >
+              Sales Reports
+            </button>
+            <button 
+              onClick={() => setActiveReport("inventory")}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${activeReport === "inventory" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+            >
+              Inventory Reports
+            </button>
+            <button 
+              onClick={() => setActiveReport("customer")}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${activeReport === "customer" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+            >
+              Customer Reports
+            </button>
+            <button 
+              onClick={() => setActiveReport("tax")}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${activeReport === "tax" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+            >
+              Tax Reports
+            </button>
+          </div>
+        </div>
+
         {/* Date Filter */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2 bg-white p-1 rounded-lg shadow-sm">
@@ -184,20 +225,32 @@ const DashboardPage = () => {
             >
               This Month
             </button>
+            <button 
+              onClick={() => setActiveTab("year")}
+              className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "year" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+            >
+              This Year
+            </button>
           </div>
-          <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-lg shadow-sm">
-            <FiCalendar className="text-gray-500" />
-            <span className="text-sm text-gray-700">Jul 15, 2023</span>
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 bg-white px-3 py-2 rounded-lg shadow-sm">
+              <FiCalendar className="text-gray-500" />
+              <span className="text-sm text-gray-700">Jul 15, 2023</span>
+            </div>
+            <button className="flex items-center space-x-1 bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-lg shadow-sm">
+              <FiDownload className="w-4 h-4" />
+              <span className="text-sm">Export</span>
+            </button>
           </div>
         </div>
 
-        {/* Stats Cards */}
+        {/* Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-blue-500">
             <div className="flex justify-between items-start">
               <div>
                 <p className="text-sm font-medium text-gray-500">Total Sales</p>
-                <p className="text-2xl font-bold mt-1">$12,345</p>
+                <p className="text-2xl font-bold mt-1">$45,621</p>
                 <p className="text-sm text-green-500 mt-2 flex items-center">
                   <FiTrendingUp className="mr-1" /> 12.5% from last month
                 </p>
@@ -208,28 +261,13 @@ const DashboardPage = () => {
             </div>
           </div>
           
-          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
-            <div className="flex justify-between items-start">
-              <div>
-                <p className="text-sm font-medium text-gray-500">Total Expense</p>
-                <p className="text-2xl font-bold mt-1">$3,213</p>
-                <p className="text-sm text-red-500 mt-2 flex items-center">
-                  <FiTrendingUp className="mr-1" /> 5.3% from last month
-                </p>
-              </div>
-              <div className="p-3 rounded-lg bg-purple-100 text-purple-600">
-                <FiBox className="w-6 h-6" />
-              </div>
-            </div>
-          </div>
-          
           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-green-500">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-500">Payment Sent</p>
-                <p className="text-2xl font-bold mt-1">$65,920</p>
+                <p className="text-sm font-medium text-gray-500">Gross Profit</p>
+                <p className="text-2xl font-bold mt-1">$28,345</p>
                 <p className="text-sm text-green-500 mt-2 flex items-center">
-                  <FiTrendingUp className="mr-1" /> 8.1% from last month
+                  <FiTrendingUp className="mr-1" /> 8.3% from last month
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-green-100 text-green-600">
@@ -238,17 +276,32 @@ const DashboardPage = () => {
             </div>
           </div>
           
+          <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-purple-500">
+            <div className="flex justify-between items-start">
+              <div>
+                <p className="text-sm font-medium text-gray-500">Total Orders</p>
+                <p className="text-2xl font-bold mt-1">1,254</p>
+                <p className="text-sm text-green-500 mt-2 flex items-center">
+                  <FiTrendingUp className="mr-1" /> 5.7% from last month
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-purple-100 text-purple-600">
+                <FiShoppingBag className="w-6 h-6" />
+              </div>
+            </div>
+          </div>
+          
           <div className="bg-white p-6 rounded-xl shadow-sm border-l-4 border-yellow-500">
             <div className="flex justify-between items-start">
               <div>
-                <p className="text-sm font-medium text-gray-500">Payment Received</p>
-                <p className="text-2xl font-bold mt-1">$72,840</p>
+                <p className="text-sm font-medium text-gray-500">Average Order Value</p>
+                <p className="text-2xl font-bold mt-1">$36.38</p>
                 <p className="text-sm text-green-500 mt-2 flex items-center">
-                  <FiTrendingUp className="mr-1" /> 15.7% from last month
+                  <FiTrendingUp className="mr-1" /> 3.2% from last month
                 </p>
               </div>
               <div className="p-3 rounded-lg bg-yellow-100 text-yellow-600">
-                <FiShoppingCart className="w-6 h-6" />
+                <FiBox className="w-6 h-6" />
               </div>
             </div>
           </div>
@@ -259,14 +312,19 @@ const DashboardPage = () => {
           {/* Sales Chart */}
           <div className="lg:col-span-2 bg-white p-6 rounded-xl shadow-sm">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold">Sales & Purchases</h2>
-              <button className="flex items-center text-sm text-gray-500 hover:text-gray-700">
-                <FiRefreshCw className="mr-1 w-4 h-4" /> Refresh
-              </button>
+              <h2 className="text-lg font-semibold">Sales & Profit Trend</h2>
+              <div className="flex items-center space-x-2">
+                <button className="flex items-center text-sm text-gray-500 hover:text-gray-700">
+                  <FiFilter className="mr-1 w-4 h-4" /> Filter
+                </button>
+                <button className="flex items-center text-sm text-gray-500 hover:text-gray-700">
+                  <FiRefreshCw className="mr-1 w-4 h-4" /> Refresh
+                </button>
+              </div>
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={salesData}>
+                <AreaChart data={salesData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                   <XAxis 
                     dataKey="month" 
@@ -288,36 +346,40 @@ const DashboardPage = () => {
                     }}
                   />
                   <Legend />
-                  <Bar 
+                  <Area 
+                    type="monotone"
                     dataKey="sales" 
                     fill="#3B82F6" 
-                    radius={[4, 4, 0, 0]} 
+                    stroke="#3B82F6"
+                    fillOpacity={0.2}
                     name="Sales"
                   />
-                  <Bar 
-                    dataKey="purchases" 
-                    fill="#6366F1" 
-                    radius={[4, 4, 0, 0]} 
-                    name="Purchases"
+                  <Area 
+                    type="monotone"
+                    dataKey="profit" 
+                    fill="#10B981" 
+                    stroke="#10B981"
+                    fillOpacity={0.2}
+                    name="Profit"
                   />
-                </BarChart>
+                </AreaChart>
               </ResponsiveContainer>
             </div>
           </div>
           
-          {/* Pie Chart */}
+          {/* Category Distribution */}
           <div className="bg-white p-6 rounded-xl shadow-sm">
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-lg font-semibold">Top Selling Products</h2>
+              <h2 className="text-lg font-semibold">Sales by Category</h2>
               <button className="text-sm text-blue-500 hover:text-blue-700">
-                View All
+                View Details
               </button>
             </div>
             <div className="h-80">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
-                    data={pieData}
+                    data={categoryData}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
@@ -326,7 +388,7 @@ const DashboardPage = () => {
                     dataKey="value"
                     label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                   >
-                    {pieData.map((entry, index) => (
+                    {categoryData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
@@ -345,13 +407,55 @@ const DashboardPage = () => {
           </div>
         </div>
 
-        {/* Recent Transactions */}
+        {/* Weekly Sales Chart */}
+        <div className="bg-white p-6 rounded-xl shadow-sm mb-8">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-lg font-semibold">Daily Sales This Week</h2>
+            <button className="text-sm text-blue-500 hover:text-blue-700">
+              View Weekly Report
+            </button>
+          </div>
+          <div className="h-64">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailySalesData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
+                <XAxis 
+                  dataKey="day" 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#6b7280' }}
+                />
+                <YAxis 
+                  axisLine={false} 
+                  tickLine={false} 
+                  tick={{ fill: '#6b7280' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: '#ffffff',
+                    border: 'none',
+                    borderRadius: '8px',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
+                  }}
+                />
+                <Bar 
+                  dataKey="sales" 
+                  fill="#3B82F6" 
+                  radius={[4, 4, 0, 0]} 
+                  name="Sales"
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Top Selling Products */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="p-6 border-b border-gray-200">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold">Recent Transactions</h2>
+              <h2 className="text-lg font-semibold">Top Selling Products</h2>
               <button className="text-sm text-blue-500 hover:text-blue-700">
-                View All Transactions
+                View All Products
               </button>
             </div>
           </div>
@@ -360,19 +464,16 @@ const DashboardPage = () => {
               <thead className="bg-gray-50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Transaction ID
+                    Product
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Customer
+                    Units Sold
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Amount
+                    Revenue
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
+                    Growth
                   </th>
                   <th scope="col" className="relative px-6 py-3">
                     <span className="sr-only">Action</span>
@@ -380,27 +481,25 @@ const DashboardPage = () => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {recentTransactions.map((transaction) => (
-                  <tr key={transaction.id}>
+                {topSellingProducts.map((product) => (
+                  <tr key={product.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      #{transaction.id}
+                      {product.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {transaction.customer}
+                      {product.sales} units
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">
-                      ${transaction.amount.toFixed(2)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {transaction.date}
+                      ${product.revenue.toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[transaction.status]}`}>
-                        {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                      <span className={`flex items-center text-sm ${product.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {product.growth >= 0 ? <FiTrendingUp className="mr-1" /> : <FiTrendingUp className="mr-1 transform rotate-180" />}
+                        {Math.abs(product.growth)}%
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <a href="#" className="text-blue-600 hover:text-blue-900">View</a>
+                      <a href="#" className="text-blue-600 hover:text-blue-900">Details</a>
                     </td>
                   </tr>
                 ))}
@@ -413,4 +512,4 @@ const DashboardPage = () => {
   );
 };
 
-export default DashboardPage;
+export default ReportsPage;
