@@ -112,7 +112,7 @@ const DashboardPage = () => {
           <div onClick={()=>router.push('/sales')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiShoppingBag className="w-5 h-5" /> <span>Sales</span>
           </div>
-          <div onClick={() => router.push('/Invoices')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <div onClick={() => router.push('/invoice')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiClipboard className="w-5 h-5" /> <span>Invoices</span>
           </div>
           <div onClick={() => router.push('/Reports')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
