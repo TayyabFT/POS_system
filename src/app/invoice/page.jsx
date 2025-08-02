@@ -149,12 +149,12 @@ const InvoicesPage = () => {
           <div className="flex items-center space-x-3 p-3 rounded-lg font-semibold">
             <FiPackage className="w-5 h-5" /> <span>Products</span>
           </div>
-          <a href="/sales" className="flex items-center space-x-3 p-3 text-blue-600 bg-blue-100 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <a href="/sales" className="flex items-center space-x-3 p-3  rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiShoppingBag className="w-5 h-5" /> <span>Sales</span>
           </a>
-          <a href="/invoices" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
+          <a href="/invoice" className="flex items-center space-x-3 p-3 rounded-lg  bg-blue-100 text-blue-600 hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiClipboard className="w-5 h-5" /> <span>Invoices</span>
-          </a>
+            </a>
           <a href="/reports" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
             <FiBarChart2 className="w-5 h-5" /> <span>Reports</span>
           </a>
