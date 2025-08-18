@@ -1,4 +1,6 @@
 "use client";
+import Navbar from "@/components/navbar";
+import Sidebar from "@/components/Sidebar";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { CiCoffeeCup } from "react-icons/ci";
@@ -240,109 +242,10 @@ export default function POSOrderPage() {
 
   return (
     <div className="flex h-screen bg-white font-sans text-gray-900">
-      {/* Sidebar */}
-      <aside
-        className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } bg-black text-white flex flex-col items-center py-6 transition-all duration-300 ease-in-out`}
-      >
-        <div className="w-14 h-14 bg-white rounded-lg mb-8 flex items-center justify-center text-black font-bold text-xl">
-          {sidebarOpen ? (
-            <span className="text-2xl font-bold">POS</span>
-          ) : (
-            <span className="text-xl">P</span>
-          )}
-        </div>
-
-        <nav className="flex flex-col w-full px-4 gap-2">
-          <div
-            className="flex items-center gap-3 p-3 bg-gray-900 rounded-lg text-white hover:bg-gray-800 transition"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <FiMenu size={20} />
-            {sidebarOpen && <span>Collapse Menu</span>}
-          </div>
-
-          <div
-            className="flex items-center gap-3 p-3 bg-white text-black rounded-lg font-medium"
-            onClick={() => {
-              router.push("/pos");
-            }}
-          >
-            <FiShoppingCart size={20} />
-            {sidebarOpen && <span>Orders</span>}
-          </div>
-
-          <div className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">
-            <FiPieChart size={20} />
-            {sidebarOpen && <span>Analytics</span>}
-          </div>
-
-          <div className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">
-            <FiUser size={20} />
-            {sidebarOpen && <span>Customers</span>}
-          </div>
-          <div
-            className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition"
-            onClick={() => {
-              router.push("/events");
-            }}
-          >
-            <FiCalendar size={20} />
-            {sidebarOpen && <span>Events</span>}
-          </div>
-          <div
-            className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition"
-            onClick={() => {
-              router.push("/marchandise");
-            }}
-          >
-            <FiCalendar size={20} />
-            {sidebarOpen && <span>Marchandise</span>}
-          </div>
-          <div className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">
-            <FiPrinter size={20} />
-            {sidebarOpen && <span>Reports</span>}
-          </div>
-
-          <div className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">
-            <FiSettings size={20} />
-            {sidebarOpen && <span>Settings</span>}
-          </div>
-        </nav>
-      </aside>
-
+      <Sidebar tabname="orders" />
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
-          <div className="flex gap-6 items-center">
-            <button className="px-5 py-2 bg-black text-white rounded-lg font-medium shadow hover:bg-gray-800 transition">
-              New Order
-            </button>
-            <button className="text-gray-600 hover:text-black transition font-medium">
-              Reservations
-            </button>
-            <button className="text-gray-600 hover:text-black transition font-medium">
-              Inventory
-            </button>
-            <button className="text-gray-600 hover:text-black transition font-medium">
-              Staff
-            </button>
-          </div>
-
-          <div className="text-sm text-gray-500 flex items-center gap-2">
-            <FiClock size={16} />
-            <span>{formatDate()}</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 border border-gray-300">
-              <FiUser size={16} />
-            </div>
-            <span className="font-medium">Alex Bizer</span>
-          </div>
-        </header>
-
+        <Navbar activeTab="new-order" />
         <div className="flex flex-1 overflow-hidden">
           {/* Menu Section */}
           <section className="w-2/3 p-6 overflow-y-auto">

@@ -19,6 +19,7 @@ import {
   FiUsers,
   FiPackage,
 } from "react-icons/fi";
+import Sidebar from "./Sidebar";
 
 export default function MerchandisePage() {
   const [selectedCategory, setSelectedCategory] = useState("All Product");
@@ -221,76 +222,7 @@ export default function MerchandisePage() {
   return (
     <div className="flex h-screen bg-white font-sans text-gray-900">
       {/* Sidebar */}
-      <aside
-        className={`${
-          sidebarOpen ? "w-64" : "w-20"
-        } bg-black text-white flex flex-col items-center py-6 transition-all duration-300 ease-in-out`}
-      >
-        <div className="w-14 h-14 bg-white rounded-lg mb-8 flex items-center justify-center text-black font-bold text-xl">
-          {sidebarOpen ? (
-            <span className="text-2xl font-bold">POS</span>
-          ) : (
-            <span className="text-xl">P</span>
-          )}
-        </div>
-
-        <nav className="flex flex-col w-full px-4 gap-2">
-          <div
-            className="flex items-center gap-3 p-3 bg-gray-900 rounded-lg text-white hover:bg-gray-800 transition"
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-          >
-            <FiMenu size={20} />
-            {sidebarOpen && <span>Collapse Menu</span>}
-          </div>
-
-          <div
-            className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition"
-            onClick={() => {
-              router.push("/pos");
-            }}
-          >
-            <FiShoppingCart size={20} />
-            {sidebarOpen && <span>Orders</span>}
-          </div>
-
-          <div className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">
-            <FiPieChart size={20} />
-            {sidebarOpen && <span>Analytics</span>}
-          </div>
-
-          <div className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">
-            <FiUser size={20} />
-            {sidebarOpen && <span>Customers</span>}
-          </div>
-          <div
-            className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition"
-            onClick={() => {
-              router.push("/events");
-            }}
-          >
-            <FiCalendar size={20} />
-            {sidebarOpen && <span>Events</span>}
-          </div>
-          <div
-            className="flex items-center gap-3 p-3 bg-white text-black rounded-lg font-medium"
-            onClick={() => {
-              router.push("/marchandise");
-            }}
-          >
-            <FiCalendar size={20} />
-            {sidebarOpen && <span>Marchandise</span>}
-          </div>
-          <div className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">
-            <FiPrinter size={20} />
-            {sidebarOpen && <span>Reports</span>}
-          </div>
-
-          <div className="flex items-center gap-3 p-3 text-gray-300 hover:text-white hover:bg-gray-800 rounded-lg transition">
-            <FiSettings size={20} />
-            {sidebarOpen && <span>Settings</span>}
-          </div>
-        </nav>
-      </aside>
+      <Sidebar tabname="marchandise" />
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
