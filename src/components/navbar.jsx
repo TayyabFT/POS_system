@@ -1,5 +1,8 @@
+"use client";
 import { FiClock, FiUser } from "react-icons/fi";
 import { useRouter } from "next/navigation";
+import { useScroll } from "framer-motion";
+import { useState } from "react";
 
 export default function Navbar({ activeTab }) {
   const formatDate = () => {
@@ -13,14 +16,14 @@ export default function Navbar({ activeTab }) {
     };
     return new Date().toLocaleDateString("en-US", options);
   };
-
+  const [openDropdown, setOpenDropdown] = useState(false);
   const router = useRouter();
 
   const tabs = [
     { id: "new-order", label: "New Order", path: "/pos" },
     { id: "reservations", label: "Reservations", path: "/reservation" },
-    { id: "inventory", label: "Inventory", path: "/inventory" },
-    { id: "staff", label: "Staff", path: "/staff" },
+    { id: "transactions", label: "Transactions", path: "/transaction" },
+    { id: "table", label: "Inventory", path: "/inventory" },
   ];
 
   const handleTabClick = (tab) => {
@@ -29,11 +32,11 @@ export default function Navbar({ activeTab }) {
 
   return (
     <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
-      <div className="flex gap-6 items-center">
+      <div className="flex gap-2 items-center">
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`px-5 py-2 rounded-lg font-medium transition cursor-pointer ${
+            className={`px-5 py-2 rounded-lg    font-medium transition cursor-pointer ${
               activeTab === tab.id
                 ? "bg-black text-white shadow hover:bg-gray-800"
                 : "text-gray-600 hover:text-black"
