@@ -34,6 +34,7 @@ import {
   FiUsers,
 } from "react-icons/fi";
 import { useEffect } from "react";
+import Navbar from "./navbar";
 
 export default function EventsPage() {
   const [selectedCategory, setSelectedCategory] = useState("Food");
@@ -284,38 +285,7 @@ export default function EventsPage() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
-          <div className="flex gap-6 items-center">
-            <button className="text-gray-600 hover:text-black transition font-medium">
-              Order
-            </button>
-            <button className="text-gray-600 hover:text-black transition font-medium">
-              Reservation
-            </button>
-            <button className="text-gray-600 hover:text-black transition font-medium">
-              Transaction
-            </button>
-            <button className="text-gray-600 hover:text-black transition font-medium">
-              Table
-            </button>
-          </div>
-
-          <div className="text-sm text-gray-500 flex items-center gap-2">
-            <span>Wed, March 27, 2024 - 09:48</span>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-                <span className="text-orange-600 font-medium text-sm">BA</span>
-              </div>
-              <div className="text-right">
-                <div className="font-medium text-sm">Brar Alex</div>
-                <div className="text-xs text-gray-500">Business Owner</div>
-              </div>
-            </div>
-          </div>
-        </header>
+        <Navbar />
 
         <div className="flex flex-1 overflow-hidden">
           {/* Events Section */}
