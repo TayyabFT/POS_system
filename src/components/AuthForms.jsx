@@ -63,7 +63,7 @@ const router = useRouter();
         localStorage.setItem('userid', response.message.user_id);
         
         // Navigate to dashboard
-        router.push('/setupbusiness');
+        router.push('/pos');
       } else {
         // Handle signup
         if (formData.password !== formData.confirm_password) {
