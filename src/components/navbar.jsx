@@ -1,10 +1,23 @@
 "use client";
-import { FiClock, FiUser } from "react-icons/fi";
+import {
+  FiClock,
+  FiUser,
+  FiMoreHorizontal,
+  FiHome,
+  FiBarChart,
+  FiTrendingUp,
+  FiSettings,
+  FiBell,
+  FiDroplet,
+  FiArrowDown,
+  FiChevronDown,
+} from "react-icons/fi";
 import { useRouter } from "next/navigation";
 import { useScroll } from "framer-motion";
-import { useState } from "react";
-
-export default function Navbar({ activeTab }) {
+import { useState, useRef, useEffect } from "react";
+import NotificationPanel from "./Notification";
+export default function Navbar({ activeTab, tabname }) {
+  const [profileDrop, setProfileDrop] = useState(false);
   const formatDate = () => {
     const options = {
       weekday: "short",
@@ -16,7 +29,9 @@ export default function Navbar({ activeTab }) {
     };
     return new Date().toLocaleDateString("en-US", options);
   };
+
   const [openDropdown, setOpenDropdown] = useState(false);
+  const dropdownRef = useRef(null);
   const router = useRouter();
 
   const tabs = [
@@ -26,9 +41,50 @@ export default function Navbar({ activeTab }) {
     { id: "table", label: "Inventory", path: "/inventory" },
   ];
 
+  const dropdownItems = [
+    { id: "kitchen", label: "Kitchen", icon: FiHome, path: "/kitchen" },
+    { id: "overview", label: "Overview", icon: FiBarChart, path: "/overview" },
+    {
+      id: "performance",
+      label: "Performance",
+      icon: FiTrendingUp,
+      path: "/performance",
+    },
+    {
+      id: "setting",
+      label: "Setting",
+      icon: FiSettings,
+      path: "/moreSettings",
+    },
+  ];
+
+  // Check if any dropdown item is active
+  const isDropdownItemActive = dropdownItems.some(
+    (item) => activeTab === item.id
+  );
+
   const handleTabClick = (tab) => {
     router.push(tab.path);
   };
+
+  const handleDropdownClick = (item) => {
+    router.push(item.path);
+    setOpenDropdown(false);
+  };
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setOpenDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   return (
     <header className="flex items-center justify-between px-8 py-4 bg-white border-b border-gray-200">
@@ -36,7 +92,7 @@ export default function Navbar({ activeTab }) {
         {tabs.map((tab) => (
           <div
             key={tab.id}
-            className={`px-5 py-2 rounded-lg    font-medium transition cursor-pointer ${
+            className={`px-4 py-2 rounded-full border border-gray-200 font-medium transition cursor-pointer ${
               activeTab === tab.id
                 ? "bg-black text-white shadow hover:bg-gray-800"
                 : "text-gray-600 hover:text-black"
@@ -46,18 +102,69 @@ export default function Navbar({ activeTab }) {
             {tab.label}
           </div>
         ))}
+
+        {/* Three dots menu */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            className={`p-2 rounded-lg font-medium transition cursor-pointer ${
+              openDropdown || isDropdownItemActive
+                ? "bg-black text-white shadow hover:bg-gray-800"
+                : "text-gray-600 hover:text-black hover:bg-gray-100"
+            }`}
+            onClick={() => setOpenDropdown(!openDropdown)}
+          >
+            <FiMoreHorizontal size={20} />
+          </button>
+
+          {/* Dropdown menu */}
+          {openDropdown && (
+            <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              {dropdownItems.map((item) => {
+                const IconComponent = item.icon;
+                return (
+                  <button
+                    key={item.id}
+                    className={`w-full text-left px-4 py-2 flex items-center gap-3 transition ${
+                      activeTab === item.id
+                        ? "bg-black text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                    onClick={() => handleDropdownClick(item)}
+                  >
+                    <IconComponent size={16} />
+                    <span>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
       </div>
 
-      <div className="text-sm text-gray-500 flex items-center gap-2">
+      <div className="text-sm text-gray-500 flex items-center gap-2 rounded-full border border-gray-200 p-2">
         <FiClock size={16} />
         <span>{formatDate()}</span>
       </div>
-
-      <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 border border-gray-300">
+      <NotificationPanel />
+      <div
+        className="flex items-center gap-3 rounded-full border border-gray-200 p-2"
+        onClick={() => {
+          router.push("/profileSettings");
+        }}
+      >
+        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 border hover:cursor-pointer border-gray-300">
           <FiUser size={16} />
         </div>
-        <span className="font-medium">Alex Bizer</span>
+        <span className="font-medium flex gap-1">
+          Alex Bizer{" "}
+          <FiChevronDown
+            className="hover:cursor-pointer"
+            size={20}
+            onClick={() => {
+              setProfileDrop(true);
+            }}
+          />
+        </span>
       </div>
     </header>
   );
