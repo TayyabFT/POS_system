@@ -4,7 +4,7 @@ import { FiSearch, FiUsers } from "react-icons/fi";
 import OrderDetailModal from "./order-detail-modal";
 import Navbar from "./navbar";
 import Sidebar from "./Sidebar";
-
+import { useRouter } from "next/navigation";
 const initialOrders = [
   {
     id: 1,
@@ -139,7 +139,7 @@ export default function POSSystemEnhanced() {
       setActiveStatusFilter(status);
     }
   };
-
+  const router = useRouter();
   const filteredOrders = orders.filter((order) => {
     const matchesTab = order.type === activeTab;
     const matchesStatus = activeStatusFilter
@@ -260,7 +260,12 @@ export default function POSSystemEnhanced() {
             <h1 className="text-xl font-semibold text-gray-900">
               Running Order
             </h1>
-            <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg">
+            <button
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+              onClick={() => {
+                router.push("/pos");
+              }}
+            >
               + Make New Order
             </button>
           </div>

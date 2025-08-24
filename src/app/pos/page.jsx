@@ -63,7 +63,46 @@ export default function POSOrderPage() {
     console.log({ name, email, phone });
     setIsOpen(false);
   };
+  // Add this component function in your existing file
+  const CustomerAvatar = ({ customer, size = "w-10 h-10" }) => {
+    return (
+      <div className="relative">
+        {customer.avatar ? (
+          <img
+            src={customer.avatar}
+            alt={customer.name}
+            className={`${size} rounded-full object-cover`}
+          />
+        ) : (
+          <div
+            className={`${size} rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold`}
+          >
+            {customer.initials || customer.avatar}{" "}
+            {/* Your existing "AM", "AJ" etc */}
+          </div>
+        )}
 
+        {/* Status indicators */}
+        <div className="absolute -bottom-1 -right-1 flex gap-1">
+          {customer.birthday && (
+            <div className="bg-pink-500 rounded-full p-1">
+              <FiGift size={8} className="text-white" />
+            </div>
+          )}
+          {customer.contactMethod === "phone" && (
+            <div className="bg-blue-500 rounded-full p-1">
+              <FiPhone size={8} className="text-white" />
+            </div>
+          )}
+          {customer.contactMethod === "walk-in" && (
+            <div className="bg-gray-500 rounded-full p-1">
+              <FiUser size={8} className="text-white" />
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
   const categories = [
     { name: "Breakfast", count: 12, icon: <FiCoffee size={20} /> },
     { name: "Lunch", count: 24, icon: <FiPackage size={20} /> },
@@ -515,6 +554,9 @@ export default function POSOrderPage() {
                 <button
                   className="flex-1 bg-black hover:bg-gray-800 text-white py-3 rounded-lg font-medium shadow transition disabled:opacity-50"
                   disabled={orderItems.length === 0}
+                  onClick={() => {
+                    router.push("/payment");
+                  }}
                 >
                   Pay Now
                 </button>
