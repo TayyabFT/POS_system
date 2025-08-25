@@ -11,11 +11,14 @@ import {
   FiDroplet,
   FiArrowDown,
   FiChevronDown,
+  FiHelpCircle,
 } from "react-icons/fi";
+import LogoutModal from "./LogoutModal";
 import { useRouter } from "next/navigation";
 import { useScroll } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import NotificationPanel from "./Notification";
+
 export default function Navbar({ activeTab, tabname }) {
   const [profileDrop, setProfileDrop] = useState(false);
   const formatDate = () => {
@@ -32,13 +35,31 @@ export default function Navbar({ activeTab, tabname }) {
 
   const [openDropdown, setOpenDropdown] = useState(false);
   const dropdownRef = useRef(null);
+  const profileDropdownRef = useRef(null); // Add ref for profile dropdown
   const router = useRouter();
+  const [showLogout, setShowLogout] = useState(false);
 
   const tabs = [
     { id: "new-order", label: "New Order", path: "/pos" },
     { id: "reservations", label: "Reservations", path: "/reservation" },
     { id: "transactions", label: "Transactions", path: "/transaction" },
-    { id: "table", label: "Inventory", path: "/inventory" },
+    { id: "table", label: "Table", path: "/table" },
+  ];
+
+  const dropdownProfileItems = [
+    {
+      id: "profile",
+      label: "Profile Settings",
+      icon: FiSettings,
+      path: "/profileSettings",
+    },
+    { id: "logout", label: "Logout", icon: FiArrowDown },
+    {
+      id: "help&support",
+      label: "Help & Support",
+      icon: FiHelpCircle,
+      path: "/help",
+    },
   ];
 
   const dropdownItems = [
@@ -68,15 +89,39 @@ export default function Navbar({ activeTab, tabname }) {
   };
 
   const handleDropdownClick = (item) => {
+    if (item.id === "logout") {
+      setShowLogout(true);
+      setOpenDropdown(false);
+      return;
+    }
     router.push(item.path);
     setOpenDropdown(false);
   };
 
-  // Close dropdown when clicking outside
+  // Fixed handleProfileDropdownClick function
+  const handleProfileDropdownClick = (item) => {
+    if (item.id === "logout") {
+      setShowLogout(true);
+      setProfileDrop(false);
+      return;
+    }
+    router.push(item.path);
+    setProfileDrop(false);
+  };
+
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
+      // Close main dropdown
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setOpenDropdown(false);
+      }
+      // Close profile dropdown
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target)
+      ) {
+        setProfileDrop(false);
       }
     };
 
@@ -145,27 +190,56 @@ export default function Navbar({ activeTab, tabname }) {
         <FiClock size={16} />
         <span>{formatDate()}</span>
       </div>
+
       <NotificationPanel />
+
       <div
-        className="flex items-center gap-3 rounded-full border border-gray-200 p-2"
-        onClick={() => {
-          router.push("/profileSettings");
-        }}
+        className="relative flex items-center gap-3 rounded-full border border-gray-200 p-2"
+        ref={profileDropdownRef}
       >
         <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 border hover:cursor-pointer border-gray-300">
           <FiUser size={16} />
         </div>
-        <span className="font-medium flex gap-1">
+        <span
+          className="font-medium flex gap-1 hover:cursor-pointer"
+          onClick={() => {
+            setProfileDrop(!profileDrop);
+          }}
+        >
           Alex Bizer{" "}
-          <FiChevronDown
-            className="hover:cursor-pointer"
-            size={20}
-            onClick={() => {
-              setProfileDrop(true);
-            }}
-          />
+          <FiChevronDown className="hover:cursor-pointer" size={20} />
         </span>
+        {profileDrop && (
+          <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+            {dropdownProfileItems.map((item) => {
+              const IconComponent = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  className={`w-full text-left px-4 py-2 flex items-center gap-3 transition ${
+                    activeTab === item.id
+                      ? "bg-black text-white"
+                      : "text-gray-700 hover:bg-gray-50"
+                  }`}
+                  onClick={() => handleProfileDropdownClick(item)}
+                >
+                  <IconComponent size={16} />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </div>
+
+      <LogoutModal
+        show={showLogout}
+        onClose={() => setShowLogout(false)}
+        onConfirm={() => {
+          setShowLogout(false);
+          router.push("/profileSettings");
+        }}
+      />
     </header>
   );
 }

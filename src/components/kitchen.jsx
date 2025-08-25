@@ -688,7 +688,7 @@ const RestaurantPOSPage = () => {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <Navbar />
+        <Navbar activeTab="kitchen" />
 
         {/* Main Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
