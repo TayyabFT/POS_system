@@ -1,92 +1,100 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FiSearch, FiUsers } from "react-icons/fi";
 import OrderDetailModal from "./order-detail-modal";
 import Navbar from "./navbar";
 import Sidebar from "./Sidebar";
 import { useRouter } from "next/navigation";
-const initialOrders = [
-  {
-    id: 1,
-    orderNumber: "XO68378",
-    tableNumber: "T1",
-    customer: {
-      name: "Ava Max",
-      avatar: "/diverse-woman-avatar.png",
-    },
-    items: [
-      { id: 1, name: "Fried Beef with Paper", quantity: 1, price: 17.5 },
-      { id: 2, name: "Fried Beef with Paper", quantity: 2, price: 17.5 },
-      { id: 3, name: "Fried Beef with Paper", quantity: 1, price: 17.5 },
-    ],
-    guestCount: 3,
-    totalPrice: 52.5,
-    date: "Wed, March 27, 2024",
-    time: "7:30 PM",
-    status: "preparation",
-    type: "dine-in",
-  },
-  {
-    id: 2,
-    orderNumber: "XO68379",
-    tableNumber: "T3",
-    customer: {
-      name: "Erica Wyatt",
-      avatar: "/woman-avatar-2.png",
-    },
-    items: [
-      { id: 1, name: "Fried Beef with Paper", quantity: 1, price: 17.5 },
-      { id: 2, name: "Caesar Salad", quantity: 1, price: 12.0 },
-    ],
-    guestCount: 2,
-    totalPrice: 29.5,
-    date: "Wed, March 27, 2024",
-    time: "7:30 PM",
-    status: "preparation",
-    type: "dine-in",
-  },
-  {
-    id: 3,
-    orderNumber: "XO68380",
-    tableNumber: "T5",
-    customer: {
-      name: "John Smith",
-      avatar: "/diverse-woman-avatar.png",
-    },
-    items: [{ id: 1, name: "Grilled Chicken", quantity: 2, price: 15.0 }],
-    guestCount: 4,
-    totalPrice: 30.0,
-    date: "Wed, March 27, 2024",
-    time: "7:45 PM",
-    status: "ready",
-    type: "dine-in",
-  },
-  {
-    id: 4,
-    orderNumber: "XO68381",
-    tableNumber: "T2",
-    customer: {
-      name: "Sarah Johnson",
-      avatar: "/woman-avatar-2.png",
-    },
-    items: [{ id: 1, name: "Pasta Carbonara", quantity: 1, price: 22.0 }],
-    guestCount: 2,
-    totalPrice: 22.0,
-    date: "Wed, March 27, 2024",
-    time: "7:15 PM",
-    status: "ready",
-    type: "dine-in",
-  },
-];
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
 export default function POSSystemEnhanced() {
   const [activeMainTab, setActiveMainTab] = useState("running-order");
   const [activeTab, setActiveTab] = useState("dine-in");
   const [activeStatusFilter, setActiveStatusFilter] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const router = useRouter();
+
+  useEffect(() => {
+    if (activeMainTab === "running-order") {
+      fetchOrders();
+    }
+  }, [activeMainTab, activeTab]);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        throw new Error("User ID not found. Please log in again.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/getorders/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Transform API data to match our frontend structure
+        const transformedOrders = data.data.map(order => ({
+          id: order.order_id,
+          orderNumber: `XO${order.order_id.toString().padStart(5, '0')}`,
+          tableNumber: order.table_number ? `T${order.table_number}` : "N/A",
+          customer: {
+            name: order.customer_name || "Walk-in Customer",
+            avatar: "/diverse-woman-avatar.png",
+          },
+          items: order.selected_items ? order.selected_items.map(item => ({
+            id: item.id,
+            name: item.product_name || `Item ${item.id}`,
+            quantity: item.quantity,
+            price: parseFloat(item.price) || 0
+          })) : [],
+          guestCount: 2, // Default value
+          totalPrice: parseFloat(order.total) || 0,
+          date: new Date(order.created_at).toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          }),
+          time: new Date(order.created_at).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          status: order.completed ? "completed" : 
+                 order.ready_to_serve ? "ready" : 
+                 order.in_preparation ? "preparation" : "preparation",
+          type: order.dining ? "dine-in" : 
+                order.pickup ? "pickup" : 
+                order.delivery ? "delivery" : "dine-in",
+          originalData: order // Keep original data for reference
+        }));
+        
+        setOrders(transformedOrders);
+      } else {
+        throw new Error(data.message || 'Failed to fetch orders');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching orders:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCardClick = (order) => {
     setSelectedOrder(order);
@@ -139,7 +147,7 @@ export default function POSSystemEnhanced() {
       setActiveStatusFilter(status);
     }
   };
-  const router = useRouter();
+
   const filteredOrders = orders.filter((order) => {
     const matchesTab = order.type === activeTab;
     const matchesStatus = activeStatusFilter
@@ -260,14 +268,23 @@ export default function POSSystemEnhanced() {
             <h1 className="text-xl font-semibold text-gray-900">
               Running Order
             </h1>
-            <button
-              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
-              onClick={() => {
-                router.push("/pos");
-              }}
-            >
-              + Make New Order
-            </button>
+            <div className="flex space-x-2">
+              <button
+                onClick={fetchOrders}
+                className="bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg flex items-center"
+                disabled={loading}
+              >
+                {loading ? "Refreshing..." : "Refresh"}
+              </button>
+              <button
+                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg"
+                onClick={() => {
+                  router.push("/pos");
+                }}
+              >
+                + Make New Order
+              </button>
+            </div>
           </div>
 
           {/* Order Type Tabs */}
@@ -417,122 +434,166 @@ export default function POSSystemEnhanced() {
 
         {/* Scrollable Orders Grid */}
         <div className="flex-1 overflow-y-auto p-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {filteredOrders.map((order) => (
-              <div
-                key={order.id}
-                onClick={() => handleCardClick(order)}
-                className="p-6 bg-white shadow-sm border border-gray-200 rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
+              <p>Error: {error}</p>
+              <button 
+                onClick={fetchOrders}
+                className="mt-2 text-blue-600 hover:underline"
               >
-                {/* Order Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-gray-800 text-white text-sm font-medium px-2 py-1 rounded">
-                      {order.tableNumber}
-                    </div>
-                    <div className="w-8 h-8 rounded-full overflow-hidden bg-pink-500 flex items-center justify-center">
-                      <span className="text-xs font-medium text-white">
-                        {order.customer.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
+                Try again
+              </button>
+            </div>
+          )}
+
+          {loading ? (
+            <div className="flex justify-center items-center h-64">
+              <div className="text-gray-500">Loading orders...</div>
+            </div>
+          ) : filteredOrders.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {filteredOrders.map((order) => (
+                <div
+                  key={order.id}
+                  onClick={() => handleCardClick(order)}
+                  className="p-6 bg-white shadow-sm border border-gray-200 rounded-lg cursor-pointer hover:shadow-md transition-shadow"
+                >
+                  {/* Order Header */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="bg-gray-800 text-white text-sm font-medium px-2 py-1 rounded">
+                        {order.tableNumber}
+                      </div>
+                      <div className="w-8 h-8 rounded-full overflow-hidden bg-pink-500 flex items-center justify-center">
+                        <span className="text-xs font-medium text-white">
+                          {order.customer.name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </span>
+                      </div>
+                      <span className="font-medium text-gray-900">
+                        {order.customer.name}
+                      </span>
+                      <span className="bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded font-medium">
+                        VIP
                       </span>
                     </div>
-                    <span className="font-medium text-gray-900">
-                      {order.customer.name}
+                  </div>
+
+                  {/* Order Details */}
+                  <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
+                    <span>Order #{order.orderNumber}</span>
+                    <div className="flex items-center space-x-1">
+                      <FiUsers className="w-4 h-4" />
+                      <span>{order.guestCount} Guests</span>
+                    </div>
+                  </div>
+
+                  {/* Date and Time */}
+                  <div className="text-sm text-gray-500 mb-4">
+                    {order.date} • {order.time}
+                  </div>
+
+                  {/* Order Type Badge */}
+                  <div className="mb-4">
+                    <span className={`px-2 py-1 text-xs font-medium rounded ${
+                      order.type === "dine-in" ? "bg-blue-100 text-blue-800" :
+                      order.type === "pickup" ? "bg-green-100 text-green-800" :
+                      "bg-purple-100 text-purple-800"
+                    }`}>
+                      {order.type.toUpperCase()}
                     </span>
-                    <span className="bg-pink-100 text-pink-800 text-xs px-2 py-1 rounded font-medium">
-                      VIP
-                    </span>
                   </div>
-                </div>
 
-                {/* Order Details */}
-                <div className="flex items-center justify-between text-sm text-gray-600 mb-4">
-                  <span>Order #{order.orderNumber}</span>
-                  <div className="flex items-center space-x-1">
-                    <FiUsers className="w-4 h-4" />
-                    <span>{order.guestCount} Guests</span>
+                  {/* Order Items */}
+                  <div className="mb-6">
+                    <div className="grid grid-cols-12 gap-2 text-sm font-medium text-gray-700 border-b pb-2 mb-3">
+                      <div className="col-span-2 text-left">QTY</div>
+                      <div className="col-span-7 text-left">Items</div>
+                      <div className="col-span-3 text-right">Price</div>
+                    </div>
+                    {order.items.slice(0, 2).map((item) => (
+                      <div
+                        key={item.id}
+                        className="grid grid-cols-12 gap-2 text-sm py-1"
+                      >
+                        <div className="col-span-2 text-left text-gray-600">
+                          {item.quantity}
+                        </div>
+                        <div className="col-span-7 text-left text-gray-900">
+                          {item.name}
+                        </div>
+                        <div className="col-span-3 text-right text-gray-900">
+                          ${(item.price * item.quantity).toFixed(2)}
+                        </div>
+                    </div>
+                    ))}
+                    {order.items.length > 2 && (
+                      <div className="grid grid-cols-12 gap-2 text-sm text-gray-600 py-1">
+                        <div className="col-span-2 text-left"></div>
+                        <div className="col-span-7 text-left">
+                          + {order.items.length - 2} More
+                        </div>
+                        <div className="col-span-3 text-right">
+                          $
+                          {order.items
+                            .slice(2)
+                            .reduce(
+                              (sum, item) => sum + item.price * item.quantity,
+                              0
+                            )
+                            .toFixed(2)}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Date and Time */}
-                <div className="text-sm text-gray-500 mb-4">
-                  {order.date} • {order.time}
-                </div>
-
-                {/* Order Items */}
-                <div className="mb-6">
-                  <div className="grid grid-cols-12 gap-2 text-sm font-medium text-gray-700 border-b pb-2 mb-3">
-                    <div className="col-span-2 text-left">QTY</div>
-                    <div className="col-span-7 text-left">Items</div>
-                    <div className="col-span-3 text-right">Price</div>
-                  </div>
-                  {order.items.slice(0, 2).map((item) => (
-                    <div
-                      key={item.id}
-                      className="grid grid-cols-12 gap-2 text-sm py-1"
+                  {/* Total and Action Button */}
+                  <div className="flex items-center justify-between">
+                    <div className="text-lg font-semibold text-gray-900">
+                      Total: ${order.totalPrice.toFixed(2)}
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleMarkReady(order.id);
+                      }}
+                      className={`px-6 py-2 rounded-lg font-medium transition-colors ${
+                        order.status === "preparation"
+                          ? "bg-blue-500 hover:bg-blue-600 text-white"
+                          : order.status === "ready"
+                          ? "bg-green-500 hover:bg-green-600 text-white"
+                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      }`}
+                      disabled={order.status === "completed"}
                     >
-                      <div className="col-span-2 text-left text-gray-600">
-                        {item.quantity}
-                      </div>
-                      <div className="col-span-7 text-left text-gray-900">
-                        {item.name}
-                      </div>
-                      <div className="col-span-3 text-right text-gray-900">
-                        ${(item.price * item.quantity).toFixed(2)}
-                      </div>
-                    </div>
-                  ))}
-                  {order.items.length > 2 && (
-                    <div className="grid grid-cols-12 gap-2 text-sm text-gray-600 py-1">
-                      <div className="col-span-2 text-left"></div>
-                      <div className="col-span-7 text-left">
-                        + {order.items.length - 2} More
-                      </div>
-                      <div className="col-span-3 text-right">
-                        $
-                        {order.items
-                          .slice(2)
-                          .reduce(
-                            (sum, item) => sum + item.price * item.quantity,
-                            0
-                          )
-                          .toFixed(2)}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Total and Action Button */}
-                <div className="flex items-center justify-between">
-                  <div className="text-lg font-semibold text-gray-900">
-                    Total: ${order.totalPrice.toFixed(2)}
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleMarkReady(order.id);
-                    }}
-                    className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                      order.status === "preparation"
-                        ? "bg-blue-500 hover:bg-blue-600 text-white"
+                      {order.status === "preparation"
+                        ? "Mark Ready"
                         : order.status === "ready"
-                        ? "bg-green-500 hover:bg-green-600 text-white"
-                        : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    }`}
-                    disabled={order.status === "completed"}
-                  >
-                    {order.status === "preparation"
-                      ? "Mark Ready"
-                      : order.status === "ready"
-                      ? "Complete"
-                      : "Completed"}
-                  </button>
+                        ? "Complete"
+                        : "Completed"}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+              <FiSearch size={48} className="mb-4 opacity-70" />
+              <p className="text-gray-500">
+                {searchQuery 
+                  ? `No orders found for "${searchQuery}" in ${activeTab}` 
+                  : `No ${activeTab} orders found`}
+              </p>
+              <button 
+                onClick={fetchOrders}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Refresh Orders
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
