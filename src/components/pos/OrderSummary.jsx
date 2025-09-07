@@ -1,4 +1,6 @@
 import { FiUserPlus, FiGrid, FiTag, FiEdit, FiShoppingCart, FiTrash2 } from "react-icons/fi";
+import { useState } from "react";
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
 const OrderSummary = ({
   orderItems,
@@ -11,8 +13,97 @@ const OrderSummary = ({
   total,
   setIsOpen,
   setShowModal,
-  router
+  setShowPickupModal,
+  setShowDeliveryModal,
+  router,
+  selectedCustomer,
+  selectedTable,
+  pickupDetails,
+  deliveryDetails,
+  discount,
+  setDiscount,
+  orderNote,
+  setOrderNote
 }) => {
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+
+  const handleSaveOrder = async () => {
+    if (orderItems.length === 0) return;
+
+    try {
+      setIsSaving(true);
+      setSaveError("");
+
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        throw new Error("User ID not found. Please log in again.");
+      }
+
+      // Prepare order data based on order type
+      const orderData = {
+        customer_name: selectedCustomer ? selectedCustomer.full_name : "Walk-in Customer",
+        phone_number: selectedCustomer ? selectedCustomer.phone : "",
+        dining: orderType === "Dine in",
+        table_number: orderType === "Dine in" && selectedTable ? selectedTable : null,
+        pickup_date: orderType === "Pickup" && pickupDetails ? pickupDetails.date : null,
+        pickup_time: orderType === "Pickup" && pickupDetails ? pickupDetails.time : null,
+        delivery_channel: orderType === "Delivery" && deliveryDetails ? deliveryDetails.channel : null,
+        delivery_date: orderType === "Delivery" && deliveryDetails ? deliveryDetails.date : null,
+        delivery_time: orderType === "Delivery" && deliveryDetails ? deliveryDetails.time : null,
+        delivery_address: orderType === "Delivery" && deliveryDetails ? deliveryDetails.address : null,
+        delivery_instruction: orderType === "Delivery" && deliveryDetails ? deliveryDetails.instruction : null,
+        discount: discount || 0,
+        order_note: orderNote || "",
+        selected_items: orderItems.map(item => ({
+          id: item.id,
+          product_name: item.name,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        subtotal: subtotal,
+        tax: tax,
+        total_amount: total
+      };
+
+      const response = await fetch(`${API_BASE_URL}/addorder/${userId}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to save order");
+      }
+
+      // Success - show confirmation and reset order
+      alert("Order saved successfully!");
+      // You might want to clear the order items here or navigate to orders list
+      
+    } catch (err) {
+      setSaveError(err.message);
+      console.error("Error saving order:", err);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleOrderTypeSelection = (type) => {
+    if (type === "Pickup") {
+      setShowPickupModal(true);
+    } else if (type === "Delivery") {
+      setShowDeliveryModal(true);
+    } else {
+      handleOrderTypeChange(type);
+    }
+  };
+
   return (
     <aside className="w-1/3 border-l bg-white flex flex-col shadow-lg border-gray-200">
       <div className="p-6 overflow-y-auto flex-1">
@@ -35,7 +126,7 @@ const OrderSummary = ({
             Dine in
           </button>
           <button
-            onClick={() => handleOrderTypeChange("Pickup")}
+            onClick={() => handleOrderTypeSelection("Pickup")}
             className={`px-3 py-1.5 text-sm rounded-lg transition border ${
               orderType === "Pickup"
                 ? "bg-black text-white border-black"
@@ -45,7 +136,7 @@ const OrderSummary = ({
             Pickup
           </button>
           <button
-            onClick={() => handleOrderTypeChange("Delivery")}
+            onClick={() => handleOrderTypeSelection("Delivery")}
             className={`px-3 py-1.5 text-sm rounded-lg transition border ${
               orderType === "Delivery"
                 ? "bg-black text-white border-black"
@@ -61,10 +152,10 @@ const OrderSummary = ({
             onClick={() => setIsOpen(true)}
             className="flex-1 flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-3 py-2 rounded-lg transition"
           >
-            <FiUserPlus size={16} /> Add Customer
+            <FiUserPlus size={16} /> {selectedCustomer ? selectedCustomer.full_name : "Add Customer"}
           </button>
           <button className="flex-1 flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-3 py-2 rounded-lg transition">
-            <FiGrid size={16} /> Select Table
+            <FiGrid size={16} /> {selectedTable ? `Table ${selectedTable}` : "Select Table"}
           </button>
         </div>
 
@@ -129,21 +220,33 @@ const OrderSummary = ({
             onClick={() => setShowModal(true)}
             className="w-full flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-4 py-3 rounded-lg transition"
           >
-            <FiTag size={16} /> Add Discount
+            <FiTag size={16} /> {discount > 0 ? `Discount: $${discount.toFixed(2)}` : "Add Discount"}
           </button>
           <button className="w-full flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-4 py-3 rounded-lg transition">
-            <FiEdit size={16} /> Add Order Note
+            <FiEdit size={16} /> {orderNote ? "Edit Order Note" : "Add Order Note"}
           </button>
         </div>
       </div>
 
       {/* Order Summary Footer */}
       <div className="p-6 border-t border-gray-200 bg-white">
+        {saveError && (
+          <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-md text-sm">
+            {saveError}
+          </div>
+        )}
+        
         <div className="space-y-3 mb-4">
           <div className="flex justify-between text-gray-600">
             <span>Sub Total</span>
             <span>${subtotal.toFixed(2)}</span>
           </div>
+          {discount > 0 && (
+            <div className="flex justify-between text-red-600">
+              <span>Discount</span>
+              <span>-${discount.toFixed(2)}</span>
+            </div>
+          )}
           <div className="flex justify-between text-gray-600">
             <span>Tax 12%</span>
             <span>${tax.toFixed(2)}</span>
@@ -157,10 +260,11 @@ const OrderSummary = ({
 
         <div className="flex gap-3">
           <button
-            className="flex-1 bg-gray-200 hover:bg-gray-300 py-3 rounded-lg font-medium transition disabled:opacity-50 border border-gray-300"
-            disabled={orderItems.length === 0}
+            onClick={handleSaveOrder}
+            className="flex-1 bg-gray-200 hover:bg-gray-300 py-3 rounded-lg font-medium transition disabled:opacity-50 border border-gray-300 flex items-center justify-center"
+            disabled={orderItems.length === 0 || isSaving}
           >
-            Save Order
+            {isSaving ? "Saving..." : "Save Order"}
           </button>
           <button
             className="flex-1 bg-black hover:bg-gray-800 text-white py-3 rounded-lg font-medium shadow transition disabled:opacity-50"
