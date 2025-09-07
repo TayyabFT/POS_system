@@ -1,7 +1,23 @@
 import { FiX, FiCamera } from "react-icons/fi";
+import { useState } from "react";
 
-const DiscountModal = ({ showModal, setShowModal }) => {
+const DiscountModal = ({ showModal, setShowModal, discount, setDiscount, subtotal }) => {
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedDiscount, setAppliedDiscount] = useState(discount);
+
   if (!showModal) return null;
+
+  const handleApplyDiscount = () => {
+    // Apply a 10% discount for demo purposes
+    const newDiscount = subtotal * 0.1;
+    setDiscount(newDiscount);
+    setAppliedDiscount(newDiscount);
+  };
+
+  const handleApply = () => {
+    setDiscount(appliedDiscount);
+    setShowModal(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -21,11 +37,16 @@ const DiscountModal = ({ showModal, setShowModal }) => {
             type="text"
             placeholder="Add promo code"
             className="flex-1 border border-gray-300 rounded-full px-4 py-2 focus:outline-none"
+            value={promoCode}
+            onChange={(e) => setPromoCode(e.target.value)}
           />
           <button className="flex items-center gap-1 border border-gray-300 rounded-full px-3 py-2 hover:border-black">
             <FiCamera size={18} /> Scan Barcode
           </button>
-          <button className="bg-gray-200 px-4 py-2 rounded-full hover:bg-gray-300">
+          <button 
+            className="bg-gray-200 px-4 py-2 rounded-full hover:bg-gray-300"
+            onClick={handleApplyDiscount}
+          >
             Apply
           </button>
         </div>
@@ -50,7 +71,8 @@ const DiscountModal = ({ showModal, setShowModal }) => {
           ].map((item, idx) => (
             <div
               key={idx}
-              className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition"
+              className="border border-gray-200 rounded-xl p-4 hover:shadow-md transition cursor-pointer"
+              onClick={handleApplyDiscount}
             >
               <div className="flex items-center gap-2 text-sm font-semibold">
                 <span>15% off</span>
@@ -75,7 +97,7 @@ const DiscountModal = ({ showModal, setShowModal }) => {
 
         <div className="px-6 py-4 border-t border-gray-200 bg-white">
           <button
-            onClick={() => setShowModal(false)}
+            onClick={handleApply}
             className="w-full bg-blue-600 text-white rounded-full py-3 font-medium hover:bg-blue-700"
           >
             Apply Discount

@@ -1,8 +1,8 @@
-import { FiX, FiSearch, FiPlus, FiPhone, FiMail, FiRefreshCw } from "react-icons/fi";
+import { FiX, FiSearch, FiPlus, FiPhone, FiMail, FiRefreshCw, FiCheck } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
-const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalOpen }) => {
+const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalOpen, onCustomerSelect }) => {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -65,7 +65,7 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
           <FiX size={20} />
         </button>
 
-        <h2 className="text-lg font-semibold">Add Customer</h2>
+        <h2 className="text-lg font-semibold">Select Customer</h2>
 
         <div className="flex items-center gap-3 mt-4">
           <div className="flex items-center flex-1 border rounded-lg px-3 py-2 bg-gray-50">
@@ -117,7 +117,8 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
               {filteredCustomers.map((customer) => (
                 <div
                   key={customer.id}
-                  className="flex items-center justify-between border rounded-lg px-3 py-3 hover:bg-gray-50 transition"
+                  className="flex items-center justify-between border rounded-lg px-3 py-3 hover:bg-gray-50 transition cursor-pointer"
+                  onClick={() => onCustomerSelect(customer)}
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
@@ -126,7 +127,6 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{customer.full_name}</span>
-                        {/* You can add VIP logic here if needed */}
                       </div>
                       <div className="flex items-center text-xs text-gray-500 gap-3 mt-0.5">
                         <span className="flex items-center gap-1">
@@ -138,9 +138,7 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
                       </div>
                     </div>
                   </div>
-                  <button className="text-blue-600 text-sm hover:underline">
-                    + Add to order
-                  </button>
+                  <FiCheck className="text-blue-600" />
                 </div>
               ))}
             </div>
@@ -172,6 +170,7 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
             setIsCreateModalOpen={setIsCreateModalOpen}
             setIsOpen={setIsOpen}
             onCustomerCreated={fetchCustomers}
+            onCustomerSelect={onCustomerSelect}
           />
         )}
       </div>
@@ -179,7 +178,7 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
   );
 };
 
-const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreated }) => {
+const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreated, onCustomerSelect }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
@@ -229,20 +228,30 @@ const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreate
         throw new Error(data.message || "Failed to create customer");
       }
 
-      // Success - close modals and reset form
-      setIsCreateModalOpen(false);
-      setIsOpen(false);
-      setName("");
-      setEmail("");
-      setPhone("");
-      
+      // Create a customer object to pass to the parent
+      const newCustomer = {
+        id: data.customer_id || Date.now(),
+        full_name: name,
+        email: email,
+        phone: phone
+      };
+
+      // Select the newly created customer
+      if (onCustomerSelect) {
+        onCustomerSelect(newCustomer);
+      }
+
       // Refresh the customer list
       if (onCustomerCreated) {
         onCustomerCreated();
       }
       
-      // Show success message
-      alert("Customer created successfully!");
+      // Close modals and reset form
+      setIsCreateModalOpen(false);
+      setIsOpen(false);
+      setName("");
+      setEmail("");
+      setPhone("");
       
     } catch (err) {
       setError(err.message);

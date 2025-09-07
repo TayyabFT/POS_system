@@ -1,14 +1,27 @@
 import { FiX } from "react-icons/fi";
+import { useState } from "react";
 
 const PickupModal = ({
   showPickupModal,
   setShowPickupModal,
-  selectedDate,
-  setSelectedDate,
-  selectedTime,
-  setSelectedTime
+  onConfirm
 }) => {
+  const [pickupDate, setPickupDate] = useState(new Date().toISOString().split('T')[0]);
+  const [pickupTime, setPickupTime] = useState("12:00");
+  const [customerName, setCustomerName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+
   if (!showPickupModal) return null;
+
+  const handleConfirm = () => {
+    onConfirm({
+      date: pickupDate,
+      time: pickupTime,
+      customerName: customerName,
+      phoneNumber: phoneNumber
+    });
+    setShowPickupModal(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -28,56 +41,24 @@ const PickupModal = ({
             <label className="block text-sm font-medium mb-2">
               Pickup Date
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {[
-                "Today",
-                "Tomorrow",
-                "Fri 28",
-                "Sat 29",
-                "Sun 30",
-                "Mon 31",
-              ].map((date) => (
-                <button
-                  key={date}
-                  className={`px-4 py-2.5 rounded-lg border whitespace-nowrap transition-all ${
-                    selectedDate === date
-                      ? "bg-black text-white border-black"
-                      : "border-gray-300 hover:border-black"
-                  }`}
-                  onClick={() => setSelectedDate(date)}
-                >
-                  {date}
-                </button>
-              ))}
-            </div>
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={pickupDate}
+              onChange={(e) => setPickupDate(e.target.value)}
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium mb-2">
               Pickup Time
             </label>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                "11:00 AM",
-                "12:00 PM",
-                "1:00 PM",
-                "2:00 PM",
-                "3:00 PM",
-                "4:00 PM",
-              ].map((time) => (
-                <button
-                  key={time}
-                  className={`py-2 rounded-lg border transition ${
-                    selectedTime === time
-                      ? "bg-black border-black text-white"
-                      : "border-gray-300 hover:border-black"
-                  }`}
-                  onClick={() => setSelectedTime(time)}
-                >
-                  {time}
-                </button>
-              ))}
-            </div>
+            <input
+              type="time"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={pickupTime}
+              onChange={(e) => setPickupTime(e.target.value)}
+            />
           </div>
 
           <div>
@@ -88,6 +69,8 @@ const PickupModal = ({
               type="text"
               placeholder="Enter customer name"
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={customerName}
+              onChange={(e) => setCustomerName(e.target.value)}
             />
           </div>
 
@@ -105,6 +88,8 @@ const PickupModal = ({
                 type="tel"
                 placeholder="Phone number"
                 className="flex-1 border-t border-r border-b border-gray-300 rounded-r-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
               />
             </div>
           </div>
@@ -118,9 +103,7 @@ const PickupModal = ({
             Cancel
           </button>
           <button
-            onClick={() => {
-              setShowPickupModal(false);
-            }}
+            onClick={handleConfirm}
             className="px-5 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition shadow"
           >
             Confirm Pickup

@@ -1,12 +1,30 @@
 import { FiX } from "react-icons/fi";
+import { useState } from "react";
 
-const DeliveryModal = ({ showDeliveryModal, setShowDeliveryModal }) => {
+const DeliveryModal = ({ showDeliveryModal, setShowDeliveryModal, onConfirm }) => {
+  const [deliveryChannel, setDeliveryChannel] = useState("Uber Eats");
+  const [deliveryDate, setDeliveryDate] = useState(new Date().toISOString().split('T')[0]);
+  const [deliveryTime, setDeliveryTime] = useState("12:00");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryInstruction, setDeliveryInstruction] = useState("");
+
   if (!showDeliveryModal) return null;
+
+  const handleConfirm = () => {
+    onConfirm({
+      channel: deliveryChannel,
+      date: deliveryDate,
+      time: deliveryTime,
+      address: deliveryAddress,
+      instruction: deliveryInstruction
+    });
+    setShowDeliveryModal(false);
+  };
 
   return (
     <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-md overflow-hidden shadow-xl animate-fade-in border border-gray-300">
-        <div className="flex justify-between items-center p-6 border-b border-gray-200 mt-20">
+        <div className="flex justify-between items-center p-6 border-b border-gray-200">
           <h2 className="text-xl font-bold">Set Delivery</h2>
           <button
             onClick={() => setShowDeliveryModal(false)}
@@ -22,14 +40,23 @@ const DeliveryModal = ({ showDeliveryModal, setShowDeliveryModal }) => {
               Delivery Channel
             </label>
             <div className="flex gap-4">
-              <button className="border p-3 rounded-lg border-black bg-black text-white font-medium">
+              <button 
+                className={`border p-3 rounded-lg ${deliveryChannel === "Uber Eats" ? "border-black bg-black text-white" : "border-gray-300 hover:border-black"}`}
+                onClick={() => setDeliveryChannel("Uber Eats")}
+              >
                 Uber Eats
               </button>
-              <button className="border p-3 rounded-lg hover:border-black">
-                Uber Eats
+              <button 
+                className={`border p-3 rounded-lg ${deliveryChannel === "DoorDash" ? "border-black bg-black text-white" : "border-gray-300 hover:border-black"}`}
+                onClick={() => setDeliveryChannel("DoorDash")}
+              >
+                DoorDash
               </button>
-              <button className="border p-3 rounded-lg hover:border-black">
-                Lyft
+              <button 
+                className={`border p-3 rounded-lg ${deliveryChannel === "In-house" ? "border-black bg-black text-white" : "border-gray-300 hover:border-black"}`}
+                onClick={() => setDeliveryChannel("In-house")}
+              >
+                In-house
               </button>
             </div>
           </div>
@@ -38,22 +65,12 @@ const DeliveryModal = ({ showDeliveryModal, setShowDeliveryModal }) => {
             <label className="block text-sm font-medium mb-2">
               Delivery Date
             </label>
-            <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-              {[
-                "Today",
-                "Sat 26 Jul",
-                "Sun 27 Jul",
-                "Mon 28 Jul",
-                "Tue 29 Jul",
-              ].map((date) => (
-                <button
-                  key={date}
-                  className="px-4 py-2.5 rounded-lg border border-gray-300 hover:border-black whitespace-nowrap"
-                >
-                  {date}
-                </button>
-              ))}
-            </div>
+            <input
+              type="date"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={deliveryDate}
+              onChange={(e) => setDeliveryDate(e.target.value)}
+            />
           </div>
 
           <div>
@@ -63,6 +80,8 @@ const DeliveryModal = ({ showDeliveryModal, setShowDeliveryModal }) => {
             <input
               type="time"
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={deliveryTime}
+              onChange={(e) => setDeliveryTime(e.target.value)}
             />
           </div>
 
@@ -74,6 +93,8 @@ const DeliveryModal = ({ showDeliveryModal, setShowDeliveryModal }) => {
               type="text"
               placeholder="Enter Delivery Address"
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={deliveryAddress}
+              onChange={(e) => setDeliveryAddress(e.target.value)}
             />
           </div>
 
@@ -85,6 +106,8 @@ const DeliveryModal = ({ showDeliveryModal, setShowDeliveryModal }) => {
               placeholder="Add delivery instruction"
               rows={2}
               className="w-full border border-gray-300 rounded-lg px-4 py-2.5 focus:outline-none focus:ring-1 focus:ring-black focus:border-black resize-none"
+              value={deliveryInstruction}
+              onChange={(e) => setDeliveryInstruction(e.target.value)}
             />
           </div>
         </div>
@@ -97,7 +120,7 @@ const DeliveryModal = ({ showDeliveryModal, setShowDeliveryModal }) => {
             Cancel
           </button>
           <button
-            onClick={() => setShowDeliveryModal(false)}
+            onClick={handleConfirm}
             className="px-5 py-2.5 bg-black text-white rounded-lg font-medium hover:bg-gray-800 transition shadow"
           >
             Confirm
