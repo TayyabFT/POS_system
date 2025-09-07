@@ -47,6 +47,8 @@ const OrderSummary = ({
         customer_name: selectedCustomer ? selectedCustomer.full_name : "Walk-in Customer",
         phone_number: selectedCustomer ? selectedCustomer.phone : "",
         dining: orderType === "Dine in",
+        pickup: orderType === "Pickup",
+        delivery: orderType === "Delivery",
         table_number: orderType === "Dine in" && selectedTable ? selectedTable : null,
         pickup_date: orderType === "Pickup" && pickupDetails ? pickupDetails.date : null,
         pickup_time: orderType === "Pickup" && pickupDetails ? pickupDetails.time : null,
