@@ -17,6 +17,7 @@ export default function POSSystemEnhanced() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
   const router = useRouter();
 
@@ -106,18 +107,92 @@ export default function POSSystemEnhanced() {
     setSelectedOrder(null);
   };
 
-  const handleMarkReady = (orderId) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) => {
-        if (order.id === orderId) {
-          let newStatus = order.status;
-          if (order.status === "preparation") newStatus = "ready";
-          else if (order.status === "ready") newStatus = "completed";
-          return { ...order, status: newStatus };
+  const handleMarkReady = async (orderId) => {
+    try {
+      setUpdatingOrderId(orderId);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/markready/${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the order status in the local state
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => {
+            if (order.id === orderId) {
+              return { ...order, status: "ready" };
+            }
+            return order;
+          })
+        );
+        
+        // Also update the selected order if it's the one being modified
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: "ready" });
         }
-        return order;
-      })
-    );
+      } else {
+        throw new Error(data.message || 'Failed to mark order as ready');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error marking order as ready:", err);
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
+
+  const handleMarkCompleted = async (orderId) => {
+    try {
+      setUpdatingOrderId(orderId);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/markcompleted/${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the order status in the local state
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => {
+            if (order.id === orderId) {
+              return { ...order, status: "completed" };
+            }
+            return order;
+          })
+        );
+        
+        // Also update the selected order if it's the one being modified
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: "completed" });
+        }
+      } else {
+        throw new Error(data.message || 'Failed to mark order as completed');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error marking order as completed:", err);
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
   const handleCancelTransaction = (orderId) => {
@@ -557,7 +632,11 @@ export default function POSSystemEnhanced() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleMarkReady(order.id);
+                        if (order.status === "preparation") {
+                          handleMarkReady(order.id);
+                        } else if (order.status === "ready") {
+                          handleMarkCompleted(order.id);
+                        }
                       }}
                       className={`px-6 py-2 rounded-lg font-medium transition-colors ${
                         order.status === "preparation"
@@ -566,13 +645,11 @@ export default function POSSystemEnhanced() {
                           ? "bg-green-500 hover:bg-green-600 text-white"
                           : "bg-gray-300 text-gray-500 cursor-not-allowed"
                       }`}
-                      disabled={order.status === "completed"}
+                      disabled={order.status === "completed" || updatingOrderId === order.id}
                     >
-                      {order.status === "preparation"
-                        ? "Mark Ready"
-                        : order.status === "ready"
-                        ? "Complete"
-                        : "Completed"}
+                      {updatingOrderId === order.id ? "Updating..." : 
+                       order.status === "preparation" ? "Mark Ready" :
+                       order.status === "ready" ? "Complete" : "Completed"}
                     </button>
                   </div>
                 </div>
@@ -615,7 +692,9 @@ export default function POSSystemEnhanced() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         onMarkReady={handleMarkReady}
+        onMarkCompleted={handleMarkCompleted}
         onCancelTransaction={handleCancelTransaction}
+        updatingOrderId={updatingOrderId}
       />
     </div>
   );

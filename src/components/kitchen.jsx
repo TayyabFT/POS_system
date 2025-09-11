@@ -3,246 +3,134 @@ import React, { useState, useEffect } from "react";
 import Navbar from "./navbar";
 import Sidebar from "./Sidebar";
 import {
-  FiClock,
   FiUsers,
-  FiMapPin,
   FiPlus,
   FiMinus,
   FiTrash2,
-  FiEdit3,
   FiX,
   FiRefreshCw,
   FiSearch,
   FiPrinter,
 } from "react-icons/fi";
-
-// Dummy data that would come from backend
-const initialOrders = [
-  {
-    id: "XO86378",
-    type: "Dine In",
-    table: "Table T1",
-    time: "06:00",
-    date: "Wed, March 27, 2024",
-    timePosted: "7:30 PM",
-    customer: { waitress: "Elena", server: "Ava" },
-    status: "cooked",
-    guests: 2,
-    items: [
-      {
-        id: 1,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "Add-ons Sauce",
-        size: "Size: Medium",
-        hasCheckmark: true,
-      },
-      {
-        id: 2,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "Add-ons Sauce",
-        size: "Size: Medium",
-      },
-      {
-        id: 3,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "",
-        size: "",
-        hasCheckmark: true,
-      },
-    ],
-  },
-  {
-    id: "XO86379",
-    type: "Dine In",
-    table: "Harry",
-    time: "06:00",
-    date: "Wed, March 27, 2024",
-    timePosted: "7:30 PM",
-    customer: { waitress: "Elena", server: "Ava" },
-    status: "cooked",
-    guests: 2,
-    items: [
-      {
-        id: 1,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "",
-        size: "",
-        isNewOrder: true,
-      },
-    ],
-  },
-  {
-    id: "XO86380",
-    type: "Dine In",
-    table: "Max",
-    time: "06:00",
-    date: "Wed, March 27, 2024",
-    timePosted: "7:30 PM",
-    customer: { waitress: "Elena", server: "Ava" },
-    status: "served",
-    guests: 2,
-    items: [
-      {
-        id: 1,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "Add-ons Sauce",
-        size: "Size: Medium",
-      },
-      {
-        id: 2,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "Add-ons Sauce",
-        size: "Size: Medium",
-      },
-      {
-        id: 3,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "",
-        size: "",
-        hasCheckmark: true,
-      },
-    ],
-  },
-  {
-    id: "XO86381",
-    type: "Dine In",
-    table: "Table T1",
-    time: "06:00",
-    date: "Wed, March 27, 2024",
-    timePosted: "7:30 PM",
-    customer: { waitress: "Elena", server: "Ava" },
-    status: "cooked",
-    guests: 2,
-    items: [
-      {
-        id: 1,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "",
-        size: "",
-        hasCheckmark: true,
-      },
-    ],
-  },
-  {
-    id: "XO86382",
-    type: "Dine In",
-    table: "Table T1",
-    time: "06:00",
-    date: "Wed, March 27, 2024",
-    timePosted: "7:30 PM",
-    customer: { waitress: "Elena", server: "Ava" },
-    status: "served",
-    guests: 2,
-    items: [
-      {
-        id: 1,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "",
-        size: "",
-      },
-    ],
-  },
-  {
-    id: "XO86383",
-    type: "Dine In",
-    table: "Harry",
-    time: "06:00",
-    date: "Wed, March 27, 2024",
-    timePosted: "7:30 PM",
-    customer: { waitress: "Elena", server: "Ava" },
-    status: "served",
-    guests: 2,
-    items: [
-      {
-        id: 1,
-        name: "Fried Beef with Paper",
-        price: 15.99,
-        quantity: 1,
-        addOns: [],
-        sauce: "",
-        size: "",
-      },
-    ],
-  },
-];
-
-// History orders (mock data for history functionality)
-const historyOrders = [
-  {
-    id: "XO86300",
-    type: "Dine In",
-    table: "Table T2",
-    time: "05:30",
-    date: "Wed, March 27, 2024",
-    timePosted: "6:00 PM",
-    customer: { waitress: "Elena", server: "Ava" },
-    status: "completed",
-    guests: 4,
-    items: [{ id: 1, name: "Grilled Chicken", price: 18.99, quantity: 2 }],
-  },
-];
+import { useRouter } from "next/navigation";
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
 const RestaurantPOSPage = () => {
-  const [orders, setOrders] = useState(initialOrders);
+  const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [activeTab, setActiveTab] = useState("order");
   const [serviceType, setServiceType] = useState("Dine in");
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("all"); // 'all', 'cooked', 'served'
+  const [statusFilter, setStatusFilter] = useState("all");
   const [showHistory, setShowHistory] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
+
+  const router = useRouter();
+  const ordersPerPage = 5;
+
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        throw new Error("User ID not found. Please log in again.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/getorders/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.data) {
+        // Transform API data to match our frontend structure
+        const transformedOrders = data.data.map(order => ({
+          id: order.order_id,
+          orderNumber: `XO${order.order_id.toString().padStart(5, '0')}`,
+          tableNumber: order.table_number ? `T${order.table_number}` : "N/A",
+          customer: {
+            name: order.customer_name || "Walk-in Customer",
+            avatar: "/diverse-woman-avatar.png",
+          },
+          items: order.selected_items ? order.selected_items.map(item => ({
+            id: item.id,
+            name: item.product_name || `Item ${item.id}`,
+            quantity: item.quantity,
+            price: parseFloat(item.price) || 0
+          })) : [],
+          guestCount: order.guest_count || 2,
+          totalPrice: parseFloat(order.total) || 0,
+          date: new Date(order.created_at).toLocaleDateString('en-US', {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          }),
+          time: new Date(order.created_at).toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+          }),
+          status: order.completed ? "completed" : 
+                 order.ready_to_serve ? "ready" : 
+                 order.in_preparation ? "preparation" : "preparation",
+          type: order.dining ? "dine-in" : 
+                order.pickup ? "pickup" : 
+                order.delivery ? "delivery" : "dine-in",
+          originalData: order
+        }));
+        
+        setOrders(transformedOrders);
+      } else {
+        throw new Error(data.message || 'Failed to fetch orders');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching orders:", err);
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  };
 
   // Filter orders based on search and status
-  const filteredOrders = showHistory
-    ? historyOrders
-    : orders.filter((order) => {
-        const matchesSearch =
-          order.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.table.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus =
-          statusFilter === "all" || order.status === statusFilter;
-        return matchesSearch && matchesStatus;
-      });
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.tableNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customer.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus =
+      statusFilter === "all" || order.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   // Count orders by status
-  const cookedCount = orders.filter(
-    (order) => order.status === "cooked"
+  const preparationCount = orders.filter(
+    (order) => order.status === "preparation"
   ).length;
-  const servedCount = orders.filter(
-    (order) => order.status === "served"
+  const readyCount = orders.filter(
+    (order) => order.status === "ready"
+  ).length;
+  const completedCount = orders.filter(
+    (order) => order.status === "completed"
   ).length;
   const totalOrdersInQueue = orders.length;
 
   // Pagination
-  const ordersPerPage = 5;
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
   const startIndex = (currentPage - 1) * ordersPerPage;
   const paginatedOrders = filteredOrders.slice(
@@ -252,9 +140,9 @@ const RestaurantPOSPage = () => {
 
   const getStatusColor = (status) => {
     switch (status) {
-      case "cooked":
+      case "preparation":
         return "bg-gray-800 text-white";
-      case "served":
+      case "ready":
         return "bg-orange-400 text-white";
       case "completed":
         return "bg-green-500 text-white";
@@ -263,74 +151,113 @@ const RestaurantPOSPage = () => {
     }
   };
 
+  const getStatusDisplay = (status) => {
+    switch (status) {
+      case "preparation":
+        return "In Preparation";
+      case "ready":
+        return "Ready to Serve";
+      case "completed":
+        return "Completed";
+      default:
+        return status;
+    }
+  };
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    // In real implementation, you would fetch fresh data from API
-    setOrders([...orders]); // Refresh with same data for demo
-    setIsRefreshing(false);
+    await fetchOrders();
   };
 
-  const handleHistory = () => {
-    setShowHistory(!showHistory);
-    setCurrentPage(1);
-  };
-
-  const updateItemQuantity = (orderId, itemId, change) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              items: order.items
-                .map((item) =>
-                  item.id === itemId
-                    ? { ...item, quantity: Math.max(0, item.quantity + change) }
-                    : item
-                )
-                .filter((item) => item.quantity > 0),
+  const handleMarkReady = async (orderId) => {
+    try {
+      setUpdatingOrderId(orderId);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/markready/${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the order status in the local state
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => {
+            if (order.id === orderId) {
+              return { ...order, status: "ready" };
             }
-          : order
-      )
-    );
+            return order;
+          })
+        );
+        
+        // Also update the selected order if it's the one being modified
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: "ready" });
+        }
+      } else {
+        throw new Error(data.message || 'Failed to mark order as ready');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error marking order as ready:", err);
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
-  const removeItem = (orderId, itemId) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId
-          ? {
-              ...order,
-              items: order.items.filter((item) => item.id !== itemId),
+  const handleMarkCompleted = async (orderId) => {
+    try {
+      setUpdatingOrderId(orderId);
+      setError(null);
+      
+      const response = await fetch(`${API_BASE_URL}/markcompleted/${orderId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the order status in the local state
+        setOrders((prevOrders) =>
+          prevOrders.map((order) => {
+            if (order.id === orderId) {
+              return { ...order, status: "completed" };
             }
-          : order
-      )
-    );
+            return order;
+          })
+        );
+        
+        // Also update the selected order if it's the one being modified
+        if (selectedOrder && selectedOrder.id === orderId) {
+          setSelectedOrder({ ...selectedOrder, status: "completed" });
+        }
+      } else {
+        throw new Error(data.message || 'Failed to mark order as completed');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error marking order as completed:", err);
+    } finally {
+      setUpdatingOrderId(null);
+    }
   };
 
-  const startOrder = (orderId) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status: "cooking" } : order
-      )
-    );
-  };
-
-  const finishOrder = (orderId) => {
-    setOrders((prevOrders) =>
-      prevOrders.map((order) =>
-        order.id === orderId ? { ...order, status: "served" } : order
-      )
-    );
-  };
-
-  const printOrder = (orderId) => {
-    const order =
-      orders.find((o) => o.id === orderId) ||
-      historyOrders.find((o) => o.id === orderId);
-    if (!order) return;
-
+  const printOrder = (order) => {
     // Create a new window for printing
     const printWindow = window.open("", "_blank");
 
@@ -339,7 +266,7 @@ const RestaurantPOSPage = () => {
       <!DOCTYPE html>
       <html>
       <head>
-        <title>Order Receipt - ${order.id}</title>
+        <title>Order Receipt - ${order.orderNumber}</title>
         <style>
           body {
             font-family: 'Courier New', monospace;
@@ -379,12 +306,6 @@ const RestaurantPOSPage = () => {
             justify-content: space-between;
             margin-bottom: 5px;
             padding: 2px 0;
-          }
-          .item-details {
-            font-size: 10px;
-            color: #666;
-            margin-left: 10px;
-            margin-bottom: 5px;
           }
           .totals {
             border-top: 1px solid #000;
@@ -428,18 +349,17 @@ const RestaurantPOSPage = () => {
           </div>
           
           <div class="order-info">
-            <div><strong>Order #:</strong> ${order.id}</div>
+            <div><strong>Order #:</strong> ${order.orderNumber}</div>
             <div><strong>Type:</strong> ${order.type}</div>
-            <div><strong>Table:</strong> ${order.table}</div>
+            <div><strong>Table:</strong> ${order.tableNumber}</div>
             <div><strong>Date:</strong> ${order.date}</div>
             <div><strong>Time:</strong> ${order.time}</div>
-            <div><strong>Status:</strong> ${order.status.toUpperCase()}</div>
-            <div><strong>Guests:</strong> ${order.guests}</div>
+            <div><strong>Status:</strong> ${getStatusDisplay(order.status)}</div>
+            <div><strong>Guests:</strong> ${order.guestCount}</div>
           </div>
 
           <div class="staff-info">
-            <div><strong>Waitress:</strong> ${order.customer.waitress}</div>
-            <div><strong>Server:</strong> ${order.customer.server}</div>
+            <div><strong>Customer:</strong> ${order.customer.name}</div>
           </div>
 
           <div class="items">
@@ -450,19 +370,7 @@ const RestaurantPOSPage = () => {
               .map(
                 (item) => `
               <div class="item">
-                <div>
-                  <div>${item.quantity}x ${item.name}</div>
-                  ${
-                    item.sauce
-                      ? `<div class="item-details">${item.sauce}</div>`
-                      : ""
-                  }
-                  ${
-                    item.size
-                      ? `<div class="item-details">${item.size}</div>`
-                      : ""
-                  }
-                </div>
+                <div>${item.quantity}x ${item.name}</div>
                 <div>${(item.price * item.quantity).toFixed(2)}</div>
               </div>
             `
@@ -473,15 +381,15 @@ const RestaurantPOSPage = () => {
           <div class="totals">
             <div class="total-line">
               <span>Subtotal:</span>
-              <span>${calculateTotal(order.items).toFixed(2)}</span>
+              <span>${order.totalPrice.toFixed(2)}</span>
             </div>
             <div class="total-line">
               <span>Tax (12%):</span>
-              <span>${(calculateTotal(order.items) * 0.12).toFixed(2)}</span>
+              <span>${(order.totalPrice * 0.12).toFixed(2)}</span>
             </div>
             <div class="total-line total-final">
               <span>TOTAL:</span>
-              <span>${(calculateTotal(order.items) * 1.12).toFixed(2)}</span>
+              <span>${(order.totalPrice * 1.12).toFixed(2)}</span>
             </div>
           </div>
 
@@ -515,10 +423,6 @@ const RestaurantPOSPage = () => {
     printWindow.focus();
   };
 
-  const calculateTotal = (items) => {
-    return items.reduce((total, item) => total + item.price * item.quantity, 0);
-  };
-
   const OrderCard = ({ order }) => (
     <div
       className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 hover:shadow-md transition-shadow cursor-pointer"
@@ -528,26 +432,26 @@ const RestaurantPOSPage = () => {
       <div className="flex justify-between items-start mb-3">
         <div>
           <h3 className="text-sm font-medium text-gray-900">{order.type}</h3>
-          <p className="text-xs text-gray-500">Order: #{order.id}</p>
+          <p className="text-xs text-gray-500">Order: #{order.orderNumber}</p>
         </div>
         <span
           className={`px-2 py-1 rounded-md text-xs font-medium ${getStatusColor(
             order.status
           )}`}
         >
-          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+          {getStatusDisplay(order.status)}
         </span>
       </div>
 
       {/* Table and Time Info */}
       <div className="mb-3">
         <div className="text-lg font-semibold text-gray-900 mb-1">
-          {order.table}
+          {order.tableNumber}
         </div>
         <div className="text-xs text-gray-500">
           <span
             className={`inline-block px-2 py-1 rounded text-xs font-medium ${
-              order.status === "served"
+              order.status === "ready"
                 ? "bg-orange-100 text-orange-800"
                 : "bg-gray-100 text-gray-700"
             }`}
@@ -560,14 +464,14 @@ const RestaurantPOSPage = () => {
       {/* Date and Time Posted */}
       <div className="text-xs text-gray-500 mb-3">
         <div>{order.date}</div>
-        <div>{order.timePosted}</div>
+        <div>{order.time}</div>
       </div>
 
       {/* Guests and Items Count */}
       <div className="flex items-center text-xs text-gray-500 mb-3 gap-4">
         <span className="flex items-center">
           <FiUsers className="w-3 h-3 mr-1" />
-          {order.guests} Guests
+          {order.guestCount} Guests
         </span>
         <span className="flex items-center">
           <span className="w-3 h-3 mr-1 flex items-center justify-center">
@@ -577,109 +481,115 @@ const RestaurantPOSPage = () => {
         </span>
       </div>
 
-      {/* Staff Info */}
+      {/* Customer Info */}
       <div className="border-t pt-3 mb-4">
-        <div className="flex justify-between text-xs">
-          <div>
-            <span className="text-gray-500">Waitress</span>
-            <div className="font-medium text-gray-900">
-              {order.customer.waitress}
-            </div>
-          </div>
-          <div className="text-right">
-            <span className="text-gray-500">Customer</span>
-            <div className="font-medium text-gray-900">
-              {order.customer.server}
-            </div>
+        <div className="text-xs">
+          <span className="text-gray-500">Customer</span>
+          <div className="font-medium text-gray-900">
+            {order.customer.name}
           </div>
         </div>
       </div>
 
       {/* Items List */}
       <div className="space-y-2 mb-4">
-        {order.items.map((item, index) => (
+        {order.items.slice(0, 3).map((item, index) => (
           <div key={item.id} className="flex items-center justify-between">
             <div className="flex items-center text-sm">
-              {item.isNewOrder && (
-                <span className="inline-block w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
-              )}
               <span className="font-medium text-gray-700 mr-2">
                 {item.quantity}
               </span>
               <span className="text-gray-900">{item.name}</span>
-              {item.hasCheckmark && (
-                <div className="ml-2 w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs">✓</span>
-                </div>
-              )}
             </div>
-            {order.status === "served" && (
-              <button className="text-gray-400 hover:text-gray-600">
-                <FiPrinter className="w-4 h-4" />
-              </button>
-            )}
+            <span className="text-sm text-gray-600">
+              ${(item.price * item.quantity).toFixed(2)}
+            </span>
           </div>
         ))}
-
-        {/* Additional item details */}
-        {order.items[0]?.sauce && (
-          <div className="text-xs text-gray-500 ml-6 -mt-1">
-            {order.items[0].sauce}
-          </div>
-        )}
-        {order.items[0]?.size && (
-          <div className="text-xs text-gray-500 ml-6">
-            {order.items[0].size}
+        {order.items.length > 3 && (
+          <div className="text-xs text-gray-500">
+            + {order.items.length - 3} more items
           </div>
         )}
       </div>
 
+      {/* Total Price */}
+      <div className="text-sm font-semibold text-gray-900 mb-4">
+        Total: ${order.totalPrice.toFixed(2)}
+      </div>
+
       {/* Action Buttons */}
-      {order.status === "cooked" && (
+      {order.status === "preparation" && (
         <div className="flex gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              startOrder(order.id);
+              handleMarkReady(order.id);
             }}
-            className="flex-1 bg-blue-500 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-600 transition-colors"
+            disabled={updatingOrderId === order.id}
+            className="flex-1 bg-blue-500 text-white py-2 px-3 rounded text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
           >
-            Start
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              finishOrder(order.id);
-            }}
-            className="flex-1 bg-gray-100 text-gray-700 py-2 px-3 rounded text-sm font-medium hover:bg-gray-200 transition-colors"
-          >
-            Finish
+            {updatingOrderId === order.id ? "Updating..." : "Mark Ready"}
           </button>
         </div>
       )}
 
-      {order.status === "served" && (
-        <div className="flex justify-center">
+      {order.status === "ready" && (
+        <div className="flex gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
-              printOrder(order.id);
+              handleMarkCompleted(order.id);
             }}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-2"
+            disabled={updatingOrderId === order.id}
+            className="flex-1 bg-green-500 text-white py-2 px-3 rounded text-sm font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
+          >
+            {updatingOrderId === order.id ? "Updating..." : "Mark Completed"}
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              printOrder(order);
+            }}
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
           >
             <FiPrinter className="w-4 h-4" />
-            Print
           </button>
         </div>
       )}
 
       {order.status === "completed" && (
-        <div className="text-center text-sm text-green-600 font-medium">
-          Order Completed
+        <div className="flex justify-between items-center">
+          <div className="text-center text-sm text-green-600 font-medium">
+            Order Completed
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              printOrder(order);
+            }}
+            className="px-3 py-2 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 transition-colors flex items-center gap-1"
+          >
+            <FiPrinter className="w-4 h-4" />
+          </button>
         </div>
       )}
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="flex h-screen bg-gray-50 font-sans text-gray-900">
+        <Sidebar />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <Navbar activeTab="kitchen" />
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-gray-500">Loading orders...</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-gray-50 font-sans text-gray-900">
@@ -696,11 +606,7 @@ const RestaurantPOSPage = () => {
           <div className="flex justify-between items-center mb-6">
             <div className="flex items-center gap-4">
               <h1 className="text-xl font-semibold text-gray-900">
-                {showHistory
-                  ? "Order History"
-                  : `${totalOrdersInQueue} Order${
-                      totalOrdersInQueue !== 1 ? "s" : ""
-                    }`}
+                {totalOrdersInQueue} Order{totalOrdersInQueue !== 1 ? "s" : ""}
               </h1>
             </div>
             <div className="flex items-center gap-4">
@@ -727,35 +633,52 @@ const RestaurantPOSPage = () => {
             </div>
           </div>
 
-          {/* Status Filter */}
-          {!showHistory && (
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() =>
-                  setStatusFilter(statusFilter === "cooked" ? "all" : "cooked")
-                }
-                className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
-                  statusFilter === "cooked"
-                    ? "bg-gray-800 text-white"
-                    : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
-                }`}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-4 bg-red-100 text-red-700 rounded-md">
+              <p>Error: {error}</p>
+              <button 
+                onClick={fetchOrders}
+                className="mt-2 text-blue-600 hover:underline"
               >
-                Cooked ({cookedCount})
-              </button>
-              <button
-                onClick={() =>
-                  setStatusFilter(statusFilter === "served" ? "all" : "served")
-                }
-                className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
-                  statusFilter === "served"
-                    ? "bg-orange-400 text-white"
-                    : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
-                }`}
-              >
-                Served ({servedCount})
+                Try again
               </button>
             </div>
           )}
+
+          {/* Status Filter */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setStatusFilter(statusFilter === "preparation" ? "all" : "preparation")}
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+                statusFilter === "preparation"
+                  ? "bg-gray-800 text-white"
+                  : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Preparation ({preparationCount})
+            </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === "ready" ? "all" : "ready")}
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+                statusFilter === "ready"
+                  ? "bg-orange-400 text-white"
+                  : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Ready ({readyCount})
+            </button>
+            <button
+              onClick={() => setStatusFilter(statusFilter === "completed" ? "all" : "completed")}
+              className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+                statusFilter === "completed"
+                  ? "bg-green-500 text-white"
+                  : "bg-white text-gray-600 border border-gray-300 hover:bg-gray-50"
+              }`}
+            >
+              Completed ({completedCount})
+            </button>
+          </div>
 
           {/* Orders Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 mb-6">
@@ -764,60 +687,70 @@ const RestaurantPOSPage = () => {
             ))}
           </div>
 
-          {/* Bottom Pagination Bar */}
-          <div className="flex justify-between items-center py-4 border-t border-gray-200 bg-white sticky bottom-0">
-            <span className="text-sm text-gray-600">
-              {filteredOrders.length} Order
-              {filteredOrders.length !== 1 ? "s" : ""}{" "}
-              {showHistory ? "in history" : "in queue"}
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1 rounded border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+          {filteredOrders.length === 0 && (
+            <div className="flex flex-col items-center justify-center h-64 text-gray-500">
+              <FiSearch size={48} className="mb-4 opacity-70" />
+              <p className="text-gray-500">
+                {searchTerm 
+                  ? `No orders found for "${searchTerm}"` 
+                  : "No orders found"}
+              </p>
+              <button 
+                onClick={fetchOrders}
+                className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
-                «
-              </button>
-              {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                const pageNum = i + Math.max(1, currentPage - 2);
-                if (pageNum > totalPages) return null;
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => setCurrentPage(pageNum)}
-                    className={`w-8 h-8 rounded text-sm ${
-                      currentPage === pageNum
-                        ? "bg-gray-800 text-white"
-                        : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
-                    }`}
-                  >
-                    {pageNum}
-                  </button>
-                );
-              })}
-              {totalPages > 5 && (
-                <span className="text-gray-400 text-sm">...</span>
-              )}
-              <button
-                onClick={() =>
-                  setCurrentPage(Math.min(totalPages, currentPage + 1))
-                }
-                disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
-              >
-                »
+                Refresh Orders
               </button>
             </div>
+          )}
 
-            <button
-              onClick={handleHistory}
-              className="bg-blue-500 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-600 transition-colors"
-            >
-              {showHistory ? "Back to Orders" : "History"}
-            </button>
-          </div>
+          {/* Bottom Pagination Bar */}
+          {filteredOrders.length > 0 && (
+            <div className="flex justify-between items-center py-4 border-t border-gray-200 bg-white sticky bottom-0">
+              <span className="text-sm text-gray-600">
+                {filteredOrders.length} Order{filteredOrders.length !== 1 ? "s" : ""} in queue
+              </span>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1 rounded border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+                >
+                  «
+                </button>
+                {[...Array(Math.min(5, totalPages))].map((_, i) => {
+                  const pageNum = i + Math.max(1, currentPage - 2);
+                  if (pageNum > totalPages) return null;
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => setCurrentPage(pageNum)}
+                      className={`w-8 h-8 rounded text-sm ${
+                        currentPage === pageNum
+                          ? "bg-gray-800 text-white"
+                          : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  );
+                })}
+                {totalPages > 5 && (
+                  <span className="text-gray-400 text-sm">...</span>
+                )}
+                <button
+                  onClick={() =>
+                    setCurrentPage(Math.min(totalPages, currentPage + 1))
+                  }
+                  disabled={currentPage === totalPages}
+                  className="px-3 py-1 rounded border border-gray-200 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 text-sm"
+                >
+                  »
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Order Details Modal */}
@@ -836,23 +769,19 @@ const RestaurantPOSPage = () => {
 
               <div className="p-4 space-y-4">
                 <div className="border-b pb-4">
-                  <p className="font-medium">Order #{selectedOrder.id}</p>
+                  <p className="font-medium">Order #{selectedOrder.orderNumber}</p>
                   <p className="text-sm text-gray-600">
-                    {selectedOrder.type} • {selectedOrder.table}
+                    {selectedOrder.type} • {selectedOrder.tableNumber}
                   </p>
                   <p className="text-sm text-gray-600">
                     {selectedOrder.date} at {selectedOrder.time}
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    {selectedOrder.timePosted}
                   </p>
                   <span
                     className={`inline-block px-3 py-1 rounded-full text-sm font-medium mt-2 ${getStatusColor(
                       selectedOrder.status
                     )}`}
                   >
-                    {selectedOrder.status.charAt(0).toUpperCase() +
-                      selectedOrder.status.slice(1)}
+                    {getStatusDisplay(selectedOrder.status)}
                   </span>
                 </div>
 
@@ -865,69 +794,19 @@ const RestaurantPOSPage = () => {
                       <div className="flex justify-between items-start mb-2">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{item.name}</span>
-                          {item.hasCheckmark && (
-                            <div className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center">
-                              <span className="text-white text-xs">✓</span>
-                            </div>
-                          )}
                         </div>
-                        {!showHistory && (
-                          <button
-                            onClick={() =>
-                              removeItem(selectedOrder.id, item.id)
-                            }
-                            className="text-red-500 hover:text-red-700"
-                          >
-                            <FiTrash2 className="w-4 h-4" />
-                          </button>
-                        )}
                       </div>
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          {!showHistory && (
-                            <>
-                              <button
-                                onClick={() =>
-                                  updateItemQuantity(
-                                    selectedOrder.id,
-                                    item.id,
-                                    -1
-                                  )
-                                }
-                                className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-sm hover:bg-gray-50"
-                              >
-                                <FiMinus className="w-3 h-3" />
-                              </button>
-                            </>
-                          )}
                           <span className="w-8 text-center">
                             {item.quantity}
                           </span>
-                          {!showHistory && (
-                            <button
-                              onClick={() =>
-                                updateItemQuantity(selectedOrder.id, item.id, 1)
-                              }
-                              className="w-6 h-6 rounded-full border border-gray-300 flex items-center justify-center text-sm hover:bg-gray-50"
-                            >
-                              <FiPlus className="w-3 h-3" />
-                            </button>
-                          )}
                         </div>
                         <span className="font-medium">
                           ${(item.price * item.quantity).toFixed(2)}
                         </span>
                       </div>
-
-                      {item.sauce && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {item.sauce}
-                        </p>
-                      )}
-                      {item.size && (
-                        <p className="text-xs text-gray-500">{item.size}</p>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -936,33 +815,55 @@ const RestaurantPOSPage = () => {
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
                     <span>
-                      ${calculateTotal(selectedOrder.items).toFixed(2)}
+                      ${selectedOrder.totalPrice.toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between text-sm text-gray-600">
                     <span>Tax (12%):</span>
                     <span>
-                      ${(calculateTotal(selectedOrder.items) * 0.12).toFixed(2)}
+                      ${(selectedOrder.totalPrice * 0.12).toFixed(2)}
                     </span>
                   </div>
                   <div className="flex justify-between font-semibold text-lg border-t pt-2">
                     <span>Total:</span>
                     <span>
-                      ${(calculateTotal(selectedOrder.items) * 1.12).toFixed(2)}
+                      ${(selectedOrder.totalPrice * 1.12).toFixed(2)}
                     </span>
                   </div>
                 </div>
 
-                {!showHistory && (
+                <div className="flex gap-2">
+                  {selectedOrder.status === "preparation" && (
+                    <button
+                      onClick={() => {
+                        handleMarkReady(selectedOrder.id);
+                        setSelectedOrder(null);
+                      }}
+                      disabled={updatingOrderId === selectedOrder.id}
+                      className="flex-1 bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
+                    >
+                      {updatingOrderId === selectedOrder.id ? "Updating..." : "Mark Ready"}
+                    </button>
+                  )}
+                  {selectedOrder.status === "ready" && (
+                    <button
+                      onClick={() => {
+                        handleMarkCompleted(selectedOrder.id);
+                        setSelectedOrder(null);
+                      }}
+                      disabled={updatingOrderId === selectedOrder.id}
+                      className="flex-1 bg-green-500 text-white py-3 rounded-lg font-medium hover:bg-green-600 transition-colors disabled:opacity-50"
+                    >
+                      {updatingOrderId === selectedOrder.id ? "Updating..." : "Mark Completed"}
+                    </button>
+                  )}
                   <button
-                    className="w-full bg-blue-500 text-white py-3 rounded-lg font-medium hover:bg-blue-600 transition-colors"
-                    onClick={() => {
-                      router.push("/payment");
-                    }}
+                    onClick={() => printOrder(selectedOrder)}
+                    className="px-4 py-3 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors flex items-center justify-center"
                   >
-                    Pay Now
+                    <FiPrinter className="w-5 h-5" />
                   </button>
-                )}
+                </div>
               </div>
             </div>
           </div>
