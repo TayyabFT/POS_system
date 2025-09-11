@@ -17,7 +17,6 @@ export default function POSSystemEnhanced() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [updatingOrderId, setUpdatingOrderId] = useState(null);
 
   const router = useRouter();
 
@@ -105,101 +104,6 @@ export default function POSSystemEnhanced() {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedOrder(null);
-  };
-
-  const handleMarkReady = async (orderId) => {
-    try {
-      setUpdatingOrderId(orderId);
-      setError(null);
-      
-      const response = await fetch(`${API_BASE_URL}/markready/${orderId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Update the order status in the local state
-        setOrders((prevOrders) =>
-          prevOrders.map((order) => {
-            if (order.id === orderId) {
-              return { ...order, status: "ready" };
-            }
-            return order;
-          })
-        );
-        
-        // Also update the selected order if it's the one being modified
-        if (selectedOrder && selectedOrder.id === orderId) {
-          setSelectedOrder({ ...selectedOrder, status: "ready" });
-        }
-      } else {
-        throw new Error(data.message || 'Failed to mark order as ready');
-      }
-    } catch (err) {
-      setError(err.message);
-      console.error("Error marking order as ready:", err);
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  };
-
-  const handleMarkCompleted = async (orderId) => {
-    try {
-      setUpdatingOrderId(orderId);
-      setError(null);
-      
-      const response = await fetch(`${API_BASE_URL}/markcompleted/${orderId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        // Update the order status in the local state
-        setOrders((prevOrders) =>
-          prevOrders.map((order) => {
-            if (order.id === orderId) {
-              return { ...order, status: "completed" };
-            }
-            return order;
-          })
-        );
-        
-        // Also update the selected order if it's the one being modified
-        if (selectedOrder && selectedOrder.id === orderId) {
-          setSelectedOrder({ ...selectedOrder, status: "completed" });
-        }
-      } else {
-        throw new Error(data.message || 'Failed to mark order as completed');
-      }
-    } catch (err) {
-      setError(err.message);
-      console.error("Error marking order as completed:", err);
-    } finally {
-      setUpdatingOrderId(null);
-    }
-  };
-
-  const handleCancelTransaction = (orderId) => {
-    setOrders((prevOrders) =>
-      prevOrders.filter((order) => order.id !== orderId)
-    );
-    handleCloseModal();
   };
 
   const getStatusCounts = () => {
@@ -498,7 +402,7 @@ export default function POSSystemEnhanced() {
               <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
                 type="text"
-                placeholder="Search order"
+                placeholder ="Search order"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 w-64 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -554,6 +458,21 @@ export default function POSSystemEnhanced() {
                         VIP
                       </span>
                     </div>
+                    <span
+                      className={`px-3 py-1 rounded-full text-xs font-medium ${
+                        order.status === "preparation"
+                          ? "bg-blue-100 text-blue-800"
+                          : order.status === "ready"
+                          ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}
+                    >
+                      {order.status === "preparation"
+                        ? "In Preparation"
+                        : order.status === "ready"
+                        ? "Ready to Serve"
+                        : "Completed"}
+                    </span>
                   </div>
 
                   {/* Order Details */}
@@ -624,33 +543,9 @@ export default function POSSystemEnhanced() {
                     )}
                   </div>
 
-                  {/* Total and Action Button */}
-                  <div className="flex items-center justify-between">
-                    <div className="text-lg font-semibold text-gray-900">
-                      Total: ${order.totalPrice.toFixed(2)}
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        if (order.status === "preparation") {
-                          handleMarkReady(order.id);
-                        } else if (order.status === "ready") {
-                          handleMarkCompleted(order.id);
-                        }
-                      }}
-                      className={`px-6 py-2 rounded-lg font-medium transition-colors ${
-                        order.status === "preparation"
-                          ? "bg-blue-500 hover:bg-blue-600 text-white"
-                          : order.status === "ready"
-                          ? "bg-green-500 hover:bg-green-600 text-white"
-                          : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                      }`}
-                      disabled={order.status === "completed" || updatingOrderId === order.id}
-                    >
-                      {updatingOrderId === order.id ? "Updating..." : 
-                       order.status === "preparation" ? "Mark Ready" :
-                       order.status === "ready" ? "Complete" : "Completed"}
-                    </button>
+                  {/* Total */}
+                  <div className="text-lg font-semibold text-gray-900">
+                    Total: ${order.totalPrice.toFixed(2)}
                   </div>
                 </div>
               ))}
@@ -691,10 +586,6 @@ export default function POSSystemEnhanced() {
         order={selectedOrder}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onMarkReady={handleMarkReady}
-        onMarkCompleted={handleMarkCompleted}
-        onCancelTransaction={handleCancelTransaction}
-        updatingOrderId={updatingOrderId}
       />
     </div>
   );
