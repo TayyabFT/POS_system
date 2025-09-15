@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "./Sidebar";
 import {
@@ -33,174 +33,169 @@ import {
   FiMapPin,
   FiUsers,
 } from "react-icons/fi";
-import { useEffect } from "react";
 import Navbar from "./navbar";
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
 export default function EventsPage() {
-  const [selectedCategory, setSelectedCategory] = useState("Food");
+  const [selectedCategory, setSelectedCategory] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("Popular");
+  const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showAddEventModal, setShowAddEventModal] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [selectedTickets, setSelectedTickets] = useState({});
   const [isOpen, setIsOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(null);
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [events, setEvents] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [newCustomer, setNewCustomer] = useState({
+    full_name: "",
+    email: "",
+    phone_number: ""
+  });
   const router = useRouter();
-  const categories = [
-    { name: "Food", count: 12, icon: "🍽️" },
-    { name: "Views", count: 24, icon: "🏞️" },
-    { name: "Expertise", count: 8, icon: "🎯" },
-    { name: "Entertainment", count: 9, icon: "🎭" },
-    { name: "Community", count: 16, icon: "👥" },
-  ];
 
-  const filters = [
-    "Popular",
-    "Lowest Price",
-    "Best Reviewed",
-    "Sale",
-    "Sold Out",
-  ];
+  useEffect(() => {
+    fetchEvents();
+    fetchCustomers();
+  }, []);
 
-  const events = [
-    {
-      id: 1,
-      title: "Grower Champagne Dinner",
-      description:
-        "Join Messina Hof for an unforgotten evening featuring the vineyard's award-winning grower champagne and their latest sparkling wines.",
-      price: 115.0,
-      category: "Food",
-      image: "https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400",
-      date: "March 15, 2024",
-      time: "7:00 PM",
-      location: "Main Dining Room",
-      capacity: 50,
-      booked: 23,
-      status: "Popular",
-    },
-    {
-      id: 2,
-      title: "Friends For Hi Party",
-      description:
-        "A rare opportunity to sample over 25 wines at half-price from Fox Hill Vineyard, the Italian grape class served and formed by Bocci Collars.",
-      price: 15.0,
-      category: "Community",
-      image:
-        "https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400",
-      date: "March 20, 2024",
-      time: "3:00 PM",
-      location: "Garden Patio",
-      capacity: 80,
-      booked: 45,
-      status: "Sale",
-    },
-    {
-      id: 3,
-      title: "Daily Ryon with Nick Pinellle",
-      description:
-        "This experience is hosted by celebrity chef Nick Pinellle who will be celebrating the seasonal bounty of the Central Coast.",
-      price: 15.0,
-      category: "Food",
-      image:
-        "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400",
-      date: "March 22, 2024",
-      time: "6:00 PM",
-      location: "Chef's Table",
-      capacity: 20,
-      booked: 18,
-      status: "Nearly Full",
-    },
-    {
-      id: 4,
-      title: "Wine Tasting Experience",
-      description:
-        "Discover our finest collection of wines with expert sommelier guidance through premium selections.",
-      price: 45.0,
-      category: "Views",
-      image:
-        "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400",
-      date: "March 25, 2024",
-      time: "5:00 PM",
-      location: "Wine Cellar",
-      capacity: 30,
-      booked: 12,
-      status: "Available",
-    },
-    {
-      id: 5,
-      title: "Live Jazz Evening",
-      description:
-        "Enjoy an intimate evening with live jazz music and premium cocktails in our lounge.",
-      price: 25.0,
-      category: "Entertainment",
-      image:
-        "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=400",
-      date: "March 28, 2024",
-      time: "8:00 PM",
-      location: "Lounge",
-      capacity: 60,
-      booked: 35,
-      status: "Popular",
-    },
-    {
-      id: 6,
-      title: "Cooking Masterclass",
-      description:
-        "Learn professional cooking techniques from our head chef in hands-on sessions.",
-      price: 85.0,
-      category: "Expertise",
-      image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=400",
-      date: "March 30, 2024",
-      time: "11:00 AM",
-      location: "Teaching Kitchen",
-      capacity: 15,
-      booked: 8,
-      status: "Available",
-    },
-  ];
-  const customers = [
-    {
-      name: "Molly Vaughan",
-      phone: "(405) 555-0128",
-      email: "molly@mail.com",
-      vip: true,
-      img: "https://i.pravatar.cc/150?img=1",
-    },
-    {
-      name: "Kathrinee Moss",
-      phone: "(209) 555-0104",
-      email: "kath@mail.com",
-      vip: false,
-      img: "https://i.pravatar.cc/150?img=2",
-    },
-    {
-      name: "Joshua Wilson",
-      phone: "(270) 555-0117",
-      email: "joshua@mail.com",
-      vip: false,
-      img: "https://i.pravatar.cc/150?img=3",
-    },
-    {
-      name: "Erica Wyatt",
-      phone: "(208) 555-0112",
-      email: "erica@mail.com",
-      vip: true,
-      img: "https://i.pravatar.cc/150?img=4",
-    },
-    {
-      name: "Zahir Mays",
-      phone: "(307) 555-0133",
-      email: "zahir@mail.com",
-      vip: true,
-      img: "https://i.pravatar.cc/150?img=5",
-    },
-  ];
-  const filteredEvents = events.filter(
-    (event) =>
-      event.category === selectedCategory &&
-      event.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const fetchEvents = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/getproducts`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        // Filter only events (is_event: true)
+        const eventProducts = data.message.filter(product => product.is_event === true);
+        setEvents(eventProducts);
+        
+        // Extract unique categories from events
+        const uniqueCategories = [...new Set(eventProducts.map(event => event.category_name))];
+        setCategories(uniqueCategories.map(cat => ({ 
+          name: cat, 
+          count: eventProducts.filter(e => e.category_name === cat).length,
+          icon: "🎭" // Default icon for events
+        })));
+      } else {
+        throw new Error(data.message || 'Failed to fetch events');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching events:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const userId = localStorage.getItem("userid");
+      if (!userId) {
+        throw new Error("User ID not found");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/getcustomers/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setCustomers(data.data || []);
+      } else {
+        throw new Error(data.message || 'Failed to fetch customers');
+      }
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+      // Fallback to sample data if API fails
+      setCustomers([
+        {
+          id: 1,
+          full_name: "Molly Vaughan",
+          phone: "(405) 555-0128",
+          email: "molly@mail.com",
+          img: "https://i.pravatar.cc/150?img=1",
+        },
+        {
+          id: 2,
+          full_name: "Kathrinee Moss",
+          phone: "(209) 555-0104",
+          email: "kath@mail.com",
+          img: "https://i.pravatar.cc/150?img=2",
+        }
+      ]);
+    }
+  };
+
+  const addCustomer = async () => {
+    try {
+      const userId = localStorage.getItem("userid");
+      if (!userId) {
+        throw new Error("User ID not found");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/addcustomer/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newCustomer),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Add the new customer to the list
+        const createdCustomer = {
+          id: data.data?.id || Date.now(),
+          full_name: newCustomer.full_name,
+          phone: newCustomer.phone_number,
+          email: newCustomer.email,
+          img: `https://i.pravatar.cc/150?img=${customers.length + 3}`
+        };
+        
+        setCustomers([...customers, createdCustomer]);
+        setSelectedCustomer(createdCustomer);
+        setNewCustomer({ full_name: "", email: "", phone_number: "" });
+        setIsCreateModalOpen(false);
+        setIsOpen(false);
+        
+        alert('Customer created successfully!');
+      } else {
+        throw new Error(data.message || 'Failed to create customer');
+      }
+    } catch (err) {
+      console.error("Error creating customer:", err);
+      alert(`Failed to create customer: ${err.message}`);
+    }
+  };
+
+  const filteredEvents = events.filter(event => {
+    const matchesSearch = event.product_name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                         event.description?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesCategory = selectedCategory === "all" || event.category_name === selectedCategory;
+    
+    return matchesSearch && matchesCategory;
+  });
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -219,33 +214,35 @@ export default function EventsPage() {
     }
   };
 
-  const formatDate = () => {
-    const options = {
-      weekday: "short",
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    };
-    return new Date().toLocaleDateString("en-US", options);
+  const formatDateForAPI = (date) => {
+    const day = String(date.getDate()).padStart(2, '0');
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
-  const addToCart = (event, tickets = 1) => {
+  const addToCart = (event, tickets = 1, date = null) => {
     const existingItem = cartItems.find((item) => item.id === event.id);
     if (existingItem) {
       setCartItems(
         cartItems.map((item) =>
           item.id === event.id
-            ? { ...item, quantity: item.quantity + tickets }
+            ? { ...item, quantity: item.quantity + tickets, selectedDate: date }
             : item
         )
       );
     } else {
-      setCartItems([...cartItems, { ...event, quantity: tickets }]);
+      setCartItems([...cartItems, { 
+        ...event, 
+        quantity: tickets, 
+        selectedDate: date,
+        title: event.product_name,
+        price: parseFloat(event.price)
+      }]);
     }
     setShowAddEventModal(false);
     setSelectedEvent(null);
+    setSelectedDate(null);
   };
 
   const removeFromCart = (id) => {
@@ -266,7 +263,7 @@ export default function EventsPage() {
 
   const calculateTotal = () => {
     const subtotal = cartItems.reduce(
-      (acc, item) => acc + item.price * item.quantity,
+      (acc, item) => acc + (item.price * item.quantity),
       0
     );
     const tax = subtotal * 0.12;
@@ -278,6 +275,89 @@ export default function EventsPage() {
   };
 
   const { subtotal, tax, total } = calculateTotal();
+
+  const handleCreateOrder = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        throw new Error("User ID not found. Please log in again.");
+      }
+
+      if (!selectedCustomer) {
+        throw new Error("Please select a customer first.");
+      }
+
+      if (cartItems.length === 0) {
+        throw new Error("Please add at least one event to the cart.");
+      }
+
+      const orderData = {
+        is_event: true,
+        customer_name: selectedCustomer.full_name,
+        phone_number: selectedCustomer.phone,
+        dining: false,
+        pickup: false,
+        delivery: false,
+        discount: 0,
+        selected_items: cartItems.map(item => ({
+          id: item.id,
+          date: item.selectedDate || formatDateForAPI(new Date()),
+          number_of_person: item.quantity,
+          product_name: item.product_name,
+          price: item.price
+        })),
+        subtotal: subtotal,
+        tax: tax,
+        total_amount: total
+      };
+
+      const response = await fetch(`${API_BASE_URL}/addorder/${userId}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(orderData),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        alert('Order created successfully!');
+        setCartItems([]);
+        setSelectedCustomer(null);
+        router.push('/payment');
+      } else {
+        throw new Error(data.message || 'Failed to create order');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error creating order:", err);
+      alert(`Error: ${err.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAddCustomerToOrder = (customer) => {
+    setSelectedCustomer(customer);
+    setIsOpen(false);
+  };
+
+  const handleNewCustomerChange = (e) => {
+    const { name, value } = e.target;
+    setNewCustomer({
+      ...newCustomer,
+      [name]: value
+    });
+  };
 
   return (
     <div className="flex h-screen bg-white font-sans text-gray-900">
@@ -305,6 +385,18 @@ export default function EventsPage() {
 
             {/* Categories */}
             <div className="flex gap-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+              <button
+                onClick={() => setSelectedCategory("all")}
+                className={`flex flex-col items-center justify-center rounded-lg px-4 py-3 min-w-[100px] transition-all border ${
+                  selectedCategory === "all"
+                    ? "bg-black text-white border-black"
+                    : "bg-white border-gray-300 hover:border-black"
+                }`}
+              >
+                <span className="text-xl mb-1">🎭</span>
+                <div className="font-medium text-sm">All Events</div>
+                <div className="text-xs mt-1">{events.length} Events</div>
+              </button>
               {categories.map((cat) => (
                 <button
                   key={cat.name}
@@ -322,51 +414,34 @@ export default function EventsPage() {
               ))}
             </div>
 
-            {/* Filters */}
-            <div className="flex gap-2 mb-6 overflow-x-auto pb-2 scrollbar-hide">
-              {filters.map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setSelectedFilter(filter)}
-                  className={`text-xs px-4 py-2 rounded-full whitespace-nowrap transition border ${
-                    selectedFilter === filter
-                      ? "bg-black text-white border-black"
-                      : "bg-white border-gray-300 hover:border-black"
-                  }`}
-                >
-                  {filter}
-                </button>
-              ))}
-            </div>
-
             {/* Events Grid */}
-            {filteredEvents.length > 0 ? (
+            {loading ? (
+              <div className="flex justify-center items-center h-64">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+              </div>
+            ) : filteredEvents.length > 0 ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredEvents.map((event) => (
                   <div
                     key={event.id}
                     className="bg-white p-4 rounded-lg shadow-sm hover:shadow-md transition cursor-pointer group relative overflow-hidden border border-gray-200"
                   >
-                    {event.status && (
-                      <span
-                        className={`absolute top-3 left-3 text-xs ${getStatusColor(
-                          event.status
-                        )} px-2 py-1 rounded-full z-10`}
-                      >
-                        {event.status}
-                      </span>
-                    )}
-
                     <div className="w-full h-40 bg-gray-100 rounded-lg mb-3 overflow-hidden">
-                      <img
-                        src={event.image}
-                        alt={event.title}
-                        className="w-full h-full object-cover"
-                      />
+                      {event.image_url ? (
+                        <img
+                          src={event.image_url}
+                          alt={event.product_name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+                          <FiCalendar className="w-12 h-12 text-blue-400" />
+                        </div>
+                      )}
                     </div>
 
                     <div className="font-medium text-gray-900 truncate mb-2">
-                      {event.title}
+                      {event.product_name}
                     </div>
 
                     <p className="text-sm text-gray-600 mb-3 line-clamp-2 leading-tight">
@@ -376,7 +451,7 @@ export default function EventsPage() {
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="font-bold text-lg">
-                          ${event.price.toFixed(2)}
+                          ${parseFloat(event.price).toFixed(2)}
                         </span>
                         <span className="text-xs text-gray-500 ml-1">
                           per person
@@ -399,8 +474,16 @@ export default function EventsPage() {
               <div className="flex flex-col items-center justify-center h-64 text-gray-400 bg-white rounded-lg shadow-sm border border-gray-200">
                 <FiCalendar size={48} className="mb-4 opacity-70" />
                 <p className="text-gray-500">
-                  No events found for "{searchQuery}" in {selectedCategory}
+                  {searchQuery 
+                    ? `No events found for "${searchQuery}" in ${selectedCategory}` 
+                    : "No events available"}
                 </p>
+                <button 
+                  onClick={fetchEvents}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Refresh Events
+                </button>
               </div>
             )}
           </section>
@@ -409,7 +492,7 @@ export default function EventsPage() {
           <aside className="w-1/3 border-l bg-white flex flex-col shadow-lg border-gray-200">
             <div className="p-6 overflow-y-auto flex-1">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-bold">Order #X086378</h2>
+                <h2 className="text-lg font-bold">Event Booking</h2>
                 <div className="flex items-center gap-2">
                   <FiUsers size={16} />
                   <span className="text-sm text-gray-500">
@@ -418,14 +501,40 @@ export default function EventsPage() {
                 </div>
               </div>
 
+              {/* Selected Customer */}
+              {selectedCustomer && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={selectedCustomer.img}
+                        alt={selectedCustomer.full_name}
+                        className="w-8 h-8 rounded-full object-cover"
+                      />
+                      <div>
+                        <div className="font-medium">{selectedCustomer.full_name}</div>
+                        <div className="text-xs text-gray-600">{selectedCustomer.phone}</div>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setSelectedCustomer(null)}
+                      className="text-red-500 hover:text-red-700"
+                    >
+                      <FiX size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-2 mb-6">
                 <button
                   onClick={() => setIsOpen(true)}
                   className="flex-1 flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-3 py-2 rounded-lg transition"
                 >
-                  <FiUserPlus size={16} /> Add Customer
+                  <FiUserPlus size={16} /> {selectedCustomer ? "Change Customer" : "Add Customer"}
                 </button>
               </div>
+              
               {isOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                   <div className="bg-white rounded-xl w-full max-w-lg shadow-lg p-6 relative">
@@ -461,40 +570,36 @@ export default function EventsPage() {
                     {/* Customer List */}
                     <div className="mt-5">
                       <h3 className="text-sm text-gray-500 mb-3">
-                        All Customer
+                        All Customers
                       </h3>
                       <div className="space-y-3">
-                        {customers.map((c, i) => (
+                        {customers.map((customer) => (
                           <div
-                            key={i}
+                            key={customer.id}
                             className="flex items-center justify-between border rounded-lg px-3 py-3 hover:bg-gray-50 transition"
                           >
                             <div className="flex items-center gap-3">
                               <img
-                                src={c.img}
-                                alt={c.name}
+                                src={customer.img}
+                                alt={customer.full_name}
                                 className="w-10 h-10 rounded-full object-cover"
                               />
                               <div>
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium">{c.name}</span>
-                                  {c.vip && (
-                                    <span className="bg-pink-100 text-pink-600 text-xs px-2 py-0.5 rounded-full">
-                                      VIP
-                                    </span>
-                                  )}
-                                </div>
+                                <div className="font-medium">{customer.full_name}</div>
                                 <div className="flex items-center text-xs text-gray-500 gap-3 mt-0.5">
                                   <span className="flex items-center gap-1">
-                                    <FiPhone /> {c.phone}
+                                    <FiPhone /> {customer.phone}
                                   </span>
                                   <span className="flex items-center gap-1">
-                                    <FiMail /> {c.email}
+                                    <FiMail /> {customer.email}
                                   </span>
                                 </div>
                               </div>
                             </div>
-                            <button className="text-blue-600 text-sm hover:underline">
+                            <button 
+                              onClick={() => handleAddCustomerToOrder(customer)}
+                              className="text-blue-600 text-sm hover:underline"
+                            >
                               + Add to order
                             </button>
                           </div>
@@ -504,41 +609,45 @@ export default function EventsPage() {
                   </div>
                 </div>
               )}
+              
               {isOpen && isCreateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center  bg-black/50 backdrop-blur-sm">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                   <div className="bg-white rounded-xl w-full max-w-md shadow-lg p-6 relative">
                     {/* Close button */}
                     <button
-                      onClick={() => setIsOpen(false)}
+                      onClick={() => setIsCreateModalOpen(false)}
                       className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
                     >
                       <FiX size={20} />
                     </button>
 
                     {/* Title */}
-                    <h2
-                      onClick={() => setIsCreateModalOpen(true)}
-                      className="text-lg font-semibold mb-4"
-                    >
+                    <h2 className="text-lg font-semibold mb-4">
                       Create New Customer
                     </h2>
 
                     {/* Name */}
                     <div className="mb-4">
-                      <label className="text-sm text-gray-500">Name</label>
+                      <label className="text-sm text-gray-500">Full Name *</label>
                       <input
                         type="text"
-                        placeholder="Add reservation tags"
+                        name="full_name"
+                        value={newCustomer.full_name}
+                        onChange={handleNewCustomerChange}
+                        placeholder="Customer name"
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
                       />
                     </div>
 
                     {/* Email */}
                     <div className="mb-4">
-                      <label className="text-sm text-gray-500">Email</label>
+                      <label className="text-sm text-gray-500">Email *</label>
                       <input
                         type="email"
-                        placeholder="Add reservation tags"
+                        name="email"
+                        value={newCustomer.email}
+                        onChange={handleNewCustomerChange}
+                        placeholder="customer@email.com"
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
                       />
                     </div>
@@ -546,10 +655,13 @@ export default function EventsPage() {
                     {/* Phone */}
                     <div className="mb-6">
                       <label className="text-sm text-gray-500">
-                        Phone Number
+                        Phone Number *
                       </label>
                       <input
                         type="tel"
+                        name="phone_number"
+                        value={newCustomer.phone_number}
+                        onChange={handleNewCustomerChange}
                         placeholder="+1 (555) 000-0000"
                         className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
                       />
@@ -564,7 +676,7 @@ export default function EventsPage() {
                         Back
                       </button>
                       <button
-                        onClick={() => setIsOpen(false)}
+                        onClick={addCustomer}
                         className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                       >
                         Create Customer
@@ -573,6 +685,7 @@ export default function EventsPage() {
                   </div>
                 </div>
               )}
+
               {/* Cart Items */}
               {cartItems.length > 0 ? (
                 <div className="space-y-3 mb-6">
@@ -590,11 +703,16 @@ export default function EventsPage() {
                         </button>
                         <div className="flex-1 min-w-0">
                           <div className="font-medium truncate">
-                            {item.title}
+                            {item.product_name}
                           </div>
                           <div className="text-sm text-gray-500">
-                            ${item.price.toFixed(2)} per ticket
+                            ${item.price.toFixed(2)} × {item.quantity} tickets
                           </div>
+                          {item.selectedDate && (
+                            <div className="text-xs text-blue-600">
+                              Date: {item.selectedDate}
+                            </div>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
@@ -658,19 +776,17 @@ export default function EventsPage() {
 
               <button
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition disabled:opacity-50"
-                disabled={cartItems.length === 0}
-                onClick={() => {
-                  router.push("/payment");
-                }}
+                disabled={cartItems.length === 0 || !selectedCustomer || loading}
+                onClick={handleCreateOrder}
               >
-                Pay Now
+                {loading ? "Creating Order..." : "Create Event Order"}
               </button>
             </div>
           </aside>
         </div>
       </main>
 
-      {/* Add Event Modal - Centered and proper size */}
+      {/* Add Event Modal */}
       {showAddEventModal && selectedEvent && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl relative">
@@ -686,15 +802,21 @@ export default function EventsPage() {
 
               <div className="flex items-start gap-4 mb-6">
                 <div className="w-16 h-16 rounded-lg overflow-hidden flex-shrink-0">
-                  <img
-                    src={selectedEvent.image}
-                    alt={selectedEvent.title}
-                    className="w-full h-full object-cover"
-                  />
+                  {selectedEvent.image_url ? (
+                    <img
+                      src={selectedEvent.image_url}
+                      alt={selectedEvent.product_name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-blue-100 flex items-center justify-center">
+                      <FiCalendar className="w-8 h-8 text-blue-400" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg leading-tight mb-1">
-                    {selectedEvent.title}
+                    {selectedEvent.product_name}
                   </h3>
                   <p className="text-sm text-gray-600 leading-tight">
                     {selectedEvent.description}
@@ -704,48 +826,34 @@ export default function EventsPage() {
 
               <div className="mb-6">
                 <h4 className="font-medium mb-3">Event Availability</h4>
-                <div className="text-right mb-3">
-                  <button className="text-blue-600 text-sm hover:underline">
-                    Show more dates
-                  </button>
-                </div>
-
+                
                 <div className="flex justify-center gap-2 mb-6">
                   {[
-                    { day: "Sun", date: "25", short: "SU" },
-                    { day: "Mon", date: "26", short: "MO" },
-                    { day: "Tue", date: "27", short: "TU" },
-                    { day: "Wed", date: "28", short: "WE" },
-                    { day: "Thu", date: "29", short: "TH" },
+                    { day: "Sun", date: "25", short: "SU", fullDate: "25-05-2025" },
+                    { day: "Mon", date: "26", short: "MO", fullDate: "26-05-2025" },
+                    { day: "Tue", date: "27", short: "TU", fullDate: "27-05-2025" },
+                    { day: "Wed", date: "28", short: "WE", fullDate: "28-05-2025" },
+                    { day: "Thu", date: "29", short: "TH", fullDate: "29-05-2025" },
                   ].map((item, idx) => (
                     <button
                       key={idx}
+                      onClick={() => setSelectedDate(item.fullDate)}
                       className={`flex flex-col items-center p-2 rounded-lg border transition ${
-                        idx === 1
+                        selectedDate === item.fullDate
                           ? "bg-blue-600 text-white border-blue-600"
                           : "border-gray-300 hover:border-blue-600"
                       }`}
                     >
                       <span className="text-xs">{item.short}</span>
                       <span className="font-medium">{item.date}</span>
-                      <span className="text-xs">Jul</span>
+                      <span className="text-xs">May</span>
                     </button>
                   ))}
                 </div>
 
-                <div className="mb-4">
-                  <h5 className="font-medium mb-2">Regular</h5>
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="w-3 h-3 rounded-full bg-gray-300"></div>
-                    <span className="text-sm text-gray-600">
-                      Non-refundable
-                    </span>
-                  </div>
-                </div>
-
                 <div className="flex items-center justify-between mb-6">
                   <div className="font-bold text-xl">
-                    ${selectedEvent.price.toFixed(2)}
+                    ${parseFloat(selectedEvent.price).toFixed(2)}
                   </div>
                   <div className="flex items-center gap-3">
                     <button
@@ -753,7 +861,7 @@ export default function EventsPage() {
                         setSelectedTickets({
                           ...selectedTickets,
                           [selectedEvent.id]: Math.max(
-                            0,
+                            1,
                             (selectedTickets[selectedEvent.id] || 1) - 1
                           ),
                         })
@@ -781,19 +889,17 @@ export default function EventsPage() {
                 </div>
 
                 <div className="space-y-3">
-                  <button className="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 py-3 rounded-lg font-medium transition">
-                    Select
-                  </button>
                   <button
                     onClick={() =>
                       addToCart(
                         selectedEvent,
-                        selectedTickets[selectedEvent.id] || 1
+                        selectedTickets[selectedEvent.id] || 1,
+                        selectedDate
                       )
                     }
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition"
                   >
-                    Add to Chart
+                    Add to Cart
                   </button>
                 </div>
               </div>
