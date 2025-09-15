@@ -26,7 +26,8 @@ import {
   FiChevronDown,
   FiFilter,
   FiDownload,
-  FiImage
+  FiImage,
+  FiCalendar
 } from 'react-icons/fi';
 import Image from 'next/image';
 
@@ -65,7 +66,7 @@ export const addProduct = async (productData, userId) => {
       throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
     }
 
-    if (!productData.image) {
+    if (!productData.image && !productData.is_event) {
       throw new Error('Product image is required');
     }
 
@@ -78,18 +79,15 @@ export const addProduct = async (productData, userId) => {
     formData.append('cost', productData.cost.toString());
     formData.append('stock', productData.stock.toString());
     formData.append('category_name', productData.category_name);
+    formData.append('is_event', productData.is_event ? 'true' : 'false');
     
     // Optional fields
     if (productData.description) formData.append('description', productData.description);
     if (productData.barcode) formData.append('barcode', productData.barcode);
     if (productData.status) formData.append('status', productData.status);
     
-    formData.append('image', productData.image);
-
-    // Debug: Log FormData contents
-    console.log('FormData contents:');
-    for (let [key, value] of formData.entries()) {
-      console.log(key, value instanceof File ? `${value.name} (${value.type}, ${value.size} bytes)` : value);
+    if (productData.image) {
+      formData.append('image', productData.image);
     }
 
     const response = await fetch(`${API_BASE_URL}/addproduct/${userId}`, {
@@ -141,6 +139,7 @@ export const addProduct = async (productData, userId) => {
         product_name: productData.product_name,
         sku: productData.sku,
         category_name: productData.category_name,
+        is_event: productData.is_event,
         image: productData.image?.name || 'None'
       }
     });
@@ -152,10 +151,6 @@ export const addProduct = async (productData, userId) => {
     throw error;
   }
 };
-
-
-
-
 
 export const updateProduct = async (productId, productData, userId) => {
   try {
@@ -171,6 +166,7 @@ export const updateProduct = async (productId, productData, userId) => {
     formData.append('cost', productData.cost.toString());
     formData.append('stock', productData.stock.toString());
     formData.append('status', productData.status);
+    formData.append('is_event', productData.is_event ? 'true' : 'false');
     
     // Only append image if a new one was selected
     if (productData.image && productData.image instanceof File) {
@@ -178,7 +174,7 @@ export const updateProduct = async (productId, productData, userId) => {
     }
 
     const response = await fetch(`${API_BASE_URL}/updateproduct/${productId}`, {
-      method: 'PUT', // or 'PATCH' depending on your API
+      method: 'PUT',
       body: formData,
     });
 
@@ -197,11 +193,6 @@ export const updateProduct = async (productId, productData, userId) => {
     throw error;
   }
 };
-
-
-
-
-
 
 export const deleteProduct = async (productId, userId) => {
   try {
@@ -236,7 +227,8 @@ export const fetchProducts = async (userId) => {
       stock: product.stock,
       status: product.status,
       image: product.image_url,
-      category_name: product.category_name
+      category_name: product.category_name,
+      is_event: product.is_event || false
     }));
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -244,13 +236,13 @@ export const fetchProducts = async (userId) => {
   }
 };
 
-
-  const ProductPage = () => {
+const ProductPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [products, setProducts] = useState([]);
   const [search, setSearch] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedProductType, setSelectedProductType] = useState('all');
   const [isAddProductModalOpen, setIsAddProductModalOpen] = useState(false);
   const [isAddCategoryModalOpen, setIsAddCategoryModalOpen] = useState(false);
   const [categories, setCategories] = useState([]);
@@ -270,6 +262,7 @@ export const fetchProducts = async (userId) => {
     cost: '',
     stock: '',
     status: 'Active',
+    is_event: false
   });
 
   const [newCategory, setNewCategory] = useState({
@@ -310,19 +303,22 @@ export const fetchProducts = async (userId) => {
   }, []);
 
   const filteredProducts = products.filter(product => {
-  const matchesSearch = product.name?.toLowerCase().includes(search.toLowerCase()) || 
-                       product.sku?.toLowerCase().includes(search.toLowerCase());
-  
-  const matchesCategory = selectedCategory === 'all' || 
-                        product.category_name === selectedCategory;
-  
-  // Updated status filter with case-insensitive comparison
-  const matchesStatus = selectedStatus === 'all' || 
-                       (product.status && 
-                        product.status.toLowerCase() === selectedStatus.toLowerCase());
-  
-  return matchesSearch && matchesCategory && matchesStatus;
-});
+    const matchesSearch = product.name?.toLowerCase().includes(search.toLowerCase()) || 
+                         product.sku?.toLowerCase().includes(search.toLowerCase());
+    
+    const matchesCategory = selectedCategory === 'all' || 
+                          product.category_name === selectedCategory;
+    
+    const matchesStatus = selectedStatus === 'all' || 
+                         (product.status && 
+                          product.status.toLowerCase() === selectedStatus.toLowerCase());
+    
+    const matchesProductType = selectedProductType === 'all' || 
+                              (selectedProductType === 'event' && product.is_event) ||
+                              (selectedProductType === 'product' && !product.is_event);
+    
+    return matchesSearch && matchesCategory && matchesStatus && matchesProductType;
+  });
 
   const validateForm = () => {
     const newErrors = {};
@@ -332,7 +328,7 @@ export const fetchProducts = async (userId) => {
     if (!newProduct.cost || isNaN(newProduct.cost)) newErrors.cost = 'Valid cost is required';
     if (!newProduct.stock || isNaN(newProduct.stock)) newErrors.stock = 'Valid stock quantity is required';
     if (!newProduct.sku) newErrors.sku = 'SKU is required';
-    // if (!isEditMode && !imageFile) newErrors.image = 'Product image is required';
+    if (!newProduct.is_event && !imageFile && !isEditMode) newErrors.image = 'Product image is required';
     return newErrors;
   };
 
@@ -343,55 +339,51 @@ export const fetchProducts = async (userId) => {
   };
 
   const handleAddProduct = async () => {
-  try {
-    const formErrors = validateForm();
-    if (Object.keys(formErrors).length > 0) {
-      setErrors(formErrors);
-      return;
-    }
+    try {
+      const formErrors = validateForm();
+      if (Object.keys(formErrors).length > 0) {
+        setErrors(formErrors);
+        return;
+      }
 
-    setIsSubmitting(true);
-    
-    const productData = {
-      product_name: newProduct.product_name,
-      description: newProduct.description,
-      sku: newProduct.sku,
-      barcode: newProduct.barcode,
-      category_name: newProduct.category_name,
-      price: newProduct.price,
-      cost: newProduct.cost,
-      stock: newProduct.stock,
-      status: newProduct.status,
-      image: imageFile
-    };
-
-    let response;
-    if (isEditMode) {
-      // Update existing product
-      response = await updateProduct(currentProductId, productData, userId);
+      setIsSubmitting(true);
       
-      // Update the products list
-      setProducts(products.map(p => 
-        p.id === currentProductId ? { ...p, ...response.data } : p
-      ));
-      
-      alert('Product updated successfully!');
-    } else {
-      // Create new product
-      response = await addProduct(productData, userId);
-      setProducts([...products, response.data]);
-      alert('Product added successfully!');
-    }
+      const productData = {
+        product_name: newProduct.product_name,
+        description: newProduct.description,
+        sku: newProduct.sku,
+        barcode: newProduct.barcode,
+        category_name: newProduct.category_name,
+        price: newProduct.price,
+        cost: newProduct.cost,
+        stock: newProduct.stock,
+        status: newProduct.status,
+        is_event: newProduct.is_event,
+        image: imageFile
+      };
 
-    resetForm();
-    setIsAddProductModalOpen(false);
-  } catch (error) {
-    console.error('Error saving product:', error);
-    alert(`Failed to ${isEditMode ? 'update' : 'add'} product: ${error.message}`);
-  } finally {
-    setIsSubmitting(false);
-  }
-};
+      let response;
+      if (isEditMode) {
+        response = await updateProduct(currentProductId, productData, userId);
+        setProducts(products.map(p => 
+          p.id === currentProductId ? { ...p, ...response.data } : p
+        ));
+        alert('Product updated successfully!');
+      } else {
+        response = await addProduct(productData, userId);
+        setProducts([...products, response.data]);
+        alert('Product added successfully!');
+      }
+
+      resetForm();
+      setIsAddProductModalOpen(false);
+    } catch (error) {
+      console.error('Error saving product:', error);
+      alert(`Failed to ${isEditMode ? 'update' : 'add'} product: ${error.message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const handleDeleteProduct = async (productId) => {
     if (!window.confirm('Are you sure you want to delete this product?')) {
@@ -408,32 +400,31 @@ export const fetchProducts = async (userId) => {
     }
   };
 
-const handleEditProduct = (product) => {
-  setNewProduct({
-    product_name: product.name || '',
-    description: product.description || '',
-    sku: product.sku || '',
-    barcode: product.barcode || '',
-    category_name: product.category_name || '',
-    price: product.price?.toString() || '',
-    cost: product.cost?.toString() || '',
-    stock: product.stock?.toString() || '',
-    status: product.status || 'Active',
-  });
-  
-  // Set the current product ID being edited
-  setCurrentProductId(product.id);
-  
-  // Set image preview if exists
-  if (product.image) {
-    setImagePreview(product.image);
-  } else {
-    setImagePreview(null);
-  }
-  
-  setIsEditMode(true);
-  setIsAddProductModalOpen(true);
-};
+  const handleEditProduct = (product) => {
+    setNewProduct({
+      product_name: product.name || '',
+      description: product.description || '',
+      sku: product.sku || '',
+      barcode: product.barcode || '',
+      category_name: product.category_name || '',
+      price: product.price?.toString() || '',
+      cost: product.cost?.toString() || '',
+      stock: product.stock?.toString() || '',
+      status: product.status || 'Active',
+      is_event: product.is_event || false
+    });
+    
+    setCurrentProductId(product.id);
+    
+    if (product.image) {
+      setImagePreview(product.image);
+    } else {
+      setImagePreview(null);
+    }
+    
+    setIsEditMode(true);
+    setIsAddProductModalOpen(true);
+  };
 
   const handleAddCategory = async () => {
     const formErrors = validateCategoryForm();
@@ -454,10 +445,10 @@ const handleEditProduct = (product) => {
   };
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setNewProduct({
       ...newProduct,
-      [name]: value
+      [name]: type === 'checkbox' ? checked : value
     });
     if (errors[name]) {
       setErrors({
@@ -491,26 +482,26 @@ const handleEditProduct = (product) => {
   };
 
   const handleImageChange = (e) => {
-  const file = e.target.files[0];
-  if (file) {
-    // Validate image
-    if (file.size > 5 * 1024 * 1024) {
-      setErrors({...errors, image: 'Image must be smaller than 5MB'});
-      return;
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors({...errors, image: 'Image must be smaller than 5MB'});
+        return;
+      }
+      if (!['image/jpeg', 'image/png'].includes(file.type)) {
+        setErrors({...errors, image: 'Only JPEG/PNG images allowed'});
+        return;
+      }
+      
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
-    if (!['image/jpeg', 'image/png'].includes(file.type)) {
-      setErrors({...errors, image: 'Only JPEG/PNG images allowed'});
-      return;
-    }
-    
-    setImageFile(file);
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      setImagePreview(reader.result);
-    };
-    reader.readAsDataURL(file);
-  }
-};
+  };
+
   const resetForm = () => {
     setNewProduct({
       product_name: '',
@@ -521,7 +512,8 @@ const handleEditProduct = (product) => {
       status: 'Active',
       sku: '',
       description: '',
-      barcode: ''
+      barcode: '',
+      is_event: false
     });
     setImagePreview(null);
     setImageFile(null);
@@ -626,7 +618,7 @@ const handleEditProduct = (product) => {
         </header>
 
         {/* Filters and Search */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <div className="md:col-span-2 flex items-center bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
             <FiSearch className="text-gray-500 mr-2" />
             <input
@@ -664,6 +656,19 @@ const handleEditProduct = (product) => {
               <option value="Inactive">Inactive</option>
             </select>
           </div>
+
+          <div className="flex items-center bg-white px-4 py-2 rounded-lg shadow-sm border border-gray-200">
+            <FiFilter className="text-gray-500 mr-2" />
+            <select 
+              className="bg-transparent outline-none w-full"
+              value={selectedProductType}
+              onChange={(e) => setSelectedProductType(e.target.value)}
+            >
+              <option value="all">All Types</option>
+              <option value="product">Products</option>
+              <option value="event">Events</option>
+            </select>
+          </div>
         </div>
 
         {/* Product Table */}
@@ -681,6 +686,9 @@ const handleEditProduct = (product) => {
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Product
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Type
                   </th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     SKU
@@ -711,19 +719,34 @@ const handleEditProduct = (product) => {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-10">
-                          <Image
-                            src={product.image || qrcodedemo}
-                            width={40}
-                            height={40}
-                            alt={product.name}
-                            className="rounded-md"
-                          />
+                          {product.is_event ? (
+                            <div className="w-10 h-10 bg-blue-100 rounded-md flex items-center justify-center">
+                              <FiCalendar className="w-5 h-5 text-blue-600" />
+                            </div>
+                          ) : (
+                            <Image
+                              src={product.image || qrcodedemo}
+                              width={40}
+                              height={40}
+                              alt={product.name}
+                              className="rounded-md"
+                            />
+                          )}
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{product.name}</div>
                           <div className="text-xs text-gray-500">{product.description}</div>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        product.is_event 
+                          ? 'bg-purple-100 text-purple-800' 
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {product.is_event ? 'Event' : 'Product'}
+                      </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {product.sku}
@@ -858,58 +881,83 @@ const handleEditProduct = (product) => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left Column */}
                 <div className="space-y-4">
-                  {/* Product Image */}
+                  {/* Product Type */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Product Image {!isEditMode && '*'}
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        name="is_event"
+                        checked={newProduct.is_event}
+                        onChange={handleInputChange}
+                        className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm font-medium text-gray-700">
+                        This is an event
+                      </span>
                     </label>
-                    <div className="flex items-center justify-center w-full">
-                      <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                          {imagePreview ? (
-                            <div className="relative w-full h-full">
-                              <img
-                                src={imagePreview}
-                                alt="Product preview"
-                                className="w-full h-full object-contain rounded-lg"
-                              />
-                            </div>
-                          ) : (
-                            <>
-                              <FiImage className="w-8 h-8 mb-3 text-gray-400" />
-                              <p className="mb-2 text-sm text-gray-500">Click to upload</p>
-                              <p className="text-xs text-gray-500">PNG, JPG (Max. 2MB)</p>
-                            </>
-                          )}
-                        </div>
-                        <input 
-                          id="product-image" 
-                          type="file" 
-                          className="hidden" 
-                          accept="image/*"
-                          onChange={handleImageChange}
-                        />
-                      </label>
-                    </div>
-                    {errors.image && <p className="mt-1 text-sm text-red-600">{errors.image}</p>}
+                    <p className="text-xs text-gray-500 mt-1">
+                      Check this if you're adding an event instead of a physical product
+                    </p>
                   </div>
+
+                  {/* Product Image - Only show for non-events */}
+                  {!newProduct.is_event && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Product Image {!isEditMode && '*'}
+                      </label>
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-40 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            {imagePreview ? (
+                              <div className="relative w-full h-full">
+                                <img
+                                  src={imagePreview}
+                                  alt="Product preview"
+                                  className="w-full h-full object-contain rounded-lg"
+                                />
+                              </div>
+                            ) : (
+                              <>
+                                <FiImage className="w-8 h-8 mb-3 text-gray-400" />
+                                <p className="mb-2 text-sm text-gray-500">Click to upload</p>
+                                <p className="text-xs text-gray-500">PNG, JPG (Max. 2MB)</p>
+                              </>
+                            )}
+                          </div>
+                          <input 
+                            id="product-image" 
+                            type="file" 
+                            className="hidden" 
+                            accept="image/*"
+                            onChange={handleImageChange}
+                          />
+                        </label>
+                      </div>
+                      {errors.image && <p className="mt-1 text-sm text-red-600">{errors.image}</p>}
+                    </div>
+                  )}
 
                   {/* Basic Information */}
                   <div>
-                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">Product Name *</label>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                      {newProduct.is_event ? 'Event Name *' : 'Product Name *'}
+                    </label>
                     <input
                       type="text"
                       id="name"
                       name="product_name"
-                      value={newProduct.name}
+                      value={newProduct.product_name}
                       onChange={handleInputChange}
-                      className={`mt-1 block w-full rounded-md border ${errors.name ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
+                      className={`mt-1 block w-full rounded-md border ${errors.product_name ? 'border-red-500' : 'border-gray-300'} shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2`}
                     />
-                    {errors.name && <p className="mt-1 text-sm text-red-600">{errors.name}</p>}
+                    {errors.product_name && <p className="mt-1 text-sm text-red-600">{errors.product_name}</p>}
                   </div>
 
                   <div>
-                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">Description</label>
+                    <label htmlFor="description" className="block text-sm font-medium text-gray-700">
+                      Description
+                    </label>
                     <textarea
                       id="description"
                       name="description"
