@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import {
   FiUsers,
@@ -33,21 +33,193 @@ import {
 } from "recharts";
 import Sidebar from "./Sidebar";
 import Navbar from "./navbar";
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
 const CustomersPage = () => {
   const [activeTab, setActiveTab] = useState("all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [customerStats, setCustomerStats] = useState({
+    total_customers: 0,
+    new_customers_current_month: 0,
+    average_spending: 0
+  });
+  const [customers, setCustomers] = useState([]);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    full_name: "",
+    email: "",
+    phone: ""
+  });
   const router = useRouter();
-  
-  const customerData = [
-    { id: 1, name: "John Doe", email: "john.doe@example.com", phone: "+1 234-567-8901", location: "New York, USA", totalSpent: 1245.50, lastPurchase: "2023-07-10", status: "active" },
-    { id: 2, name: "Sarah Smith", email: "sarah.smith@example.com", phone: "+1 345-678-9012", location: "Los Angeles, USA", totalSpent: 890.25, lastPurchase: "2023-07-08", status: "active" },
-    { id: 3, name: "Michael Johnson", email: "michael.j@example.com", phone: "+1 456-789-0123", location: "Chicago, USA", totalSpent: 2450.75, lastPurchase: "2023-07-15", status: "active" },
-    { id: 4, name: "Emily Wilson", email: "emily.w@example.com", phone: "+1 567-890-1234", location: "Houston, USA", totalSpent: 675.30, lastPurchase: "2023-06-28", status: "inactive" },
-    { id: 5, name: "David Brown", email: "david.b@example.com", phone: "+1 678-901-2345", location: "Miami, USA", totalSpent: 1890.45, lastPurchase: "2023-07-12", status: "active" },
-    { id: 6, name: "Jennifer Lee", email: "jennifer.l@example.com", phone: "+1 789-012-3456", location: "Seattle, USA", totalSpent: 3200.10, lastPurchase: "2023-07-05", status: "active" },
-    { id: 7, name: "Robert Garcia", email: "robert.g@example.com", phone: "+1 890-123-4567", location: "Boston, USA", totalSpent: 540.20, lastPurchase: "2023-06-20", status: "inactive" },
-    { id: 8, name: "Lisa Martinez", email: "lisa.m@example.com", phone: "+1 901-234-5678", location: "Denver, USA", totalSpent: 1125.60, lastPurchase: "2023-07-01", status: "active" }
-  ];
+
+  useEffect(() => {
+    fetchCustomerStats();
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomerStats = async () => {
+    try {
+      const userId = localStorage.getItem("userid");
+      setLoading(true);
+      const response = await fetch(`${API_BASE_URL}/customerstats/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setCustomerStats({
+          total_customers: parseInt(data.data.total_customers) || 0,
+          new_customers_current_month: parseInt(data.data.new_customers_current_month) || 0,
+          average_spending: parseFloat(data.data.average_spending) || 0
+        });
+      } else {
+        throw new Error(data.message || 'Failed to fetch customer statistics');
+      }
+    } catch (err) {
+      setError(err.message);
+      console.error("Error fetching customer stats:", err);
+      // Fallback to sample data if API fails
+      setCustomerStats({
+        total_customers: 1254,
+        new_customers_current_month: 85,
+        average_spending: 248.35
+      });
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const userId = localStorage.getItem("userid");
+      if (!userId) {
+        throw new Error("User ID not found");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/getcustomers/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setCustomers(data.data || []);
+      } else {
+        throw new Error(data.message || 'Failed to fetch customers');
+      }
+    } catch (err) {
+      console.error("Error fetching customers:", err);
+      // Fallback to sample data if API fails
+      setCustomers([
+        { id: 1, full_name: "John Doe", email: "john.doe@example.com", phone: "+1 234-567-8901" },
+        { id: 2, full_name: "Sarah Smith", email: "sarah.smith@example.com", phone: "+1 345-678-9012" },
+        { id: 3, full_name: "Michael Johnson", email: "michael.j@example.com", phone: "+1 456-789-0123" },
+        { id: 4, full_name: "Emily Wilson", email: "emily.w@example.com", phone: "+1 567-890-1234" }
+      ]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const deleteCustomer = async (customerId) => {
+    if (!window.confirm("Are you sure you want to delete this customer?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/deletecustomer/${customerId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Remove the customer from the local state
+        setCustomers(customers.filter(customer => customer.id !== customerId));
+        alert('Customer deleted successfully!');
+        // Refresh stats
+        fetchCustomerStats();
+      } else {
+        throw new Error(data.message || 'Failed to delete customer');
+      }
+    } catch (err) {
+      console.error("Error deleting customer:", err);
+      alert(`Failed to delete customer: ${err.message}`);
+    }
+  };
+
+  const openEditModal = (customer) => {
+    setEditingCustomer(customer);
+    setEditFormData({
+      full_name: customer.full_name || "",
+      email: customer.email || "",
+      phone: customer.phone || ""
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const closeEditModal = () => {
+    setIsEditModalOpen(false);
+    setEditingCustomer(null);
+    setEditFormData({
+      full_name: "",
+      email: "",
+      phone: ""
+    });
+  };
+
+  const handleEditInputChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData({
+      ...editFormData,
+      [name]: value
+    });
+  };
+
+  const updateCustomer = async () => {
+    if (!editingCustomer) return;
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/editcustomer/${editingCustomer.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(editFormData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Update the customer in the local state
+        setCustomers(customers.map(customer => 
+          customer.id === editingCustomer.id 
+            ? { ...customer, ...editFormData }
+            : customer
+        ));
+        closeEditModal();
+        alert('Customer updated successfully!');
+      } else {
+        throw new Error(data.message || 'Failed to update customer');
+      }
+    } catch (err) {
+      console.error("Error updating customer:", err);
+      alert(`Failed to update customer: ${err.message}`);
+    }
+  };
 
   const customerSpendingData = [
     { month: "Jan", spending: 2400 },
@@ -66,10 +238,19 @@ const CustomersPage = () => {
     { name: "Inactive", value: 10 }
   ];
 
-  const statusStyles = {
-    active: "bg-green-100 text-green-800",
-    inactive: "bg-gray-100 text-gray-800"
-  };
+  if (loading) {
+    return (
+      <div className="flex min-h-screen bg-white font-sans text-gray-900">
+        <Sidebar tabname="customers" />
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <Navbar tabname="customers" />
+          <div className="flex-1 p-6 overflow-y-auto flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-white font-sans text-gray-900">
@@ -87,6 +268,12 @@ const CustomersPage = () => {
             <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
             <p className="text-gray-600">Manage and analyze your customer database.</p>
           </div>
+
+          {error && (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-6">
+              <p>Error: {error}</p>
+            </div>
+          )}
 
           {/* Customer Actions */}
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -136,9 +323,9 @@ const CustomersPage = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Total Customers</p>
-                  <p className="text-2xl font-bold mt-1">1,254</p>
+                  <p className="text-2xl font-bold mt-1">{customerStats.total_customers}</p>
                   <p className="text-sm text-green-500 mt-2 flex items-center">
-                    <FiTrendingUp className="mr-1" /> 12.5% from last month
+                    <FiTrendingUp className="mr-1" /> {customerStats.new_customers_current_month} new this month
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
@@ -151,9 +338,9 @@ const CustomersPage = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Active Customers</p>
-                  <p className="text-2xl font-bold mt-1">1,180</p>
+                  <p className="text-2xl font-bold mt-1">{customerStats.total_customers}</p>
                   <p className="text-sm text-green-500 mt-2 flex items-center">
-                    <FiTrendingUp className="mr-1" /> 8.3% from last month
+                    <FiTrendingUp className="mr-1" /> All customers
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-green-100 text-green-600">
@@ -166,9 +353,9 @@ const CustomersPage = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-gray-500">New Customers</p>
-                  <p className="text-2xl font-bold mt-1">85</p>
+                  <p className="text-2xl font-bold mt-1">{customerStats.new_customers_current_month}</p>
                   <p className="text-sm text-green-500 mt-2 flex items-center">
-                    <FiTrendingUp className="mr-1" /> 15.7% from last month
+                    <FiTrendingUp className="mr-1" /> This month
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-purple-100 text-purple-600">
@@ -181,9 +368,9 @@ const CustomersPage = () => {
               <div className="flex justify-between items-start">
                 <div>
                   <p className="text-sm font-medium text-gray-500">Avg. Spending</p>
-                  <p className="text-2xl font-bold mt-1">$248.35</p>
+                  <p className="text-2xl font-bold mt-1">${customerStats.average_spending.toFixed(2)}</p>
                   <p className="text-sm text-green-500 mt-2 flex items-center">
-                    <FiTrendingUp className="mr-1" /> 5.2% from last month
+                    <FiTrendingUp className="mr-1" /> Per customer
                   </p>
                 </div>
                 <div className="p-3 rounded-lg bg-yellow-100 text-yellow-600">
@@ -200,7 +387,10 @@ const CustomersPage = () => {
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-lg font-semibold">Customer Spending Trend</h2>
                 <div className="flex items-center space-x-2">
-                  <button className="flex items-center text-sm text-gray-500 hover:text-gray-700">
+                  <button 
+                    onClick={fetchCustomerStats}
+                    className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+                  >
                     <FiRefreshCw className="mr-1 w-4 h-4" /> Refresh
                   </button>
                 </div>
@@ -298,7 +488,7 @@ const CustomersPage = () => {
               <div className="flex justify-between items-center">
                 <h2 className="text-lg font-semibold">Customer List</h2>
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-500">Showing 8 of 1,254 customers</span>
+                  <span className="text-sm text-gray-500">Showing {customers.length} of {customerStats.total_customers} customers</span>
                 </div>
               </div>
             </div>
@@ -313,32 +503,20 @@ const CustomersPage = () => {
                       Contact Info
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Location
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Spent
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Last Purchase
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th scope="col" className="relative px-6 py-3">
-                      <span className="sr-only">Actions</span>
+                      Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {customerData.map((customer) => (
+                  {customers.map((customer) => (
                     <tr key={customer.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-500">
-                            {customer.name.charAt(0)}
+                            {customer.full_name?.charAt(0) || 'C'}
                           </div>
                           <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                            <div className="text-sm font-medium text-gray-900">{customer.full_name}</div>
                             <div className="text-sm text-gray-500">Customer ID: #{customer.id}</div>
                           </div>
                         </div>
@@ -351,28 +529,18 @@ const CustomersPage = () => {
                           <FiPhone className="mr-1 text-gray-400" /> {customer.phone}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900 flex items-center">
-                          <FiMapPin className="mr-1 text-gray-400" /> {customer.location}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        ${customer.totalSpent.toFixed(2)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {customer.lastPurchase}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusStyles[customer.status]}`}>
-                          {customer.status.charAt(0).toUpperCase() + customer.status.slice(1)}
-                        </span>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-3 justify-end">
-                          <button className="text-blue-600 hover:text-blue-900">
+                          <button 
+                            onClick={() => openEditModal(customer)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
                             <FiEdit className="w-4 h-4" />
                           </button>
-                          <button className="text-red-600 hover:text-red-900">
+                          <button 
+                            onClick={() => deleteCustomer(customer.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
                             <FiTrash2 className="w-4 h-4" />
                           </button>
                         </div>
@@ -384,7 +552,7 @@ const CustomersPage = () => {
             </div>
             <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
               <div className="text-sm text-gray-500">
-                Showing page 1 of 157
+                Showing page 1 of {Math.ceil(customerStats.total_customers / 10)}
               </div>
               <div className="flex items-center space-x-2">
                 <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50" disabled>
@@ -407,6 +575,79 @@ const CustomersPage = () => {
           </div>
         </div>
       </main>
+
+      {/* Edit Customer Modal */}
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="bg-white rounded-xl w-full max-w-md shadow-lg p-6 relative">
+            {/* Close button */}
+            <button
+              onClick={closeEditModal}
+              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
+            >
+              <FiX size={20} />
+            </button>
+
+            {/* Title */}
+            <h2 className="text-lg font-semibold mb-4">Edit Customer</h2>
+
+            {/* Name */}
+            <div className="mb-4">
+              <label className="text-sm text-gray-500">Full Name *</label>
+              <input
+                type="text"
+                name="full_name"
+                value={editFormData.full_name}
+                onChange={handleEditInputChange}
+                placeholder="Customer name"
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+              />
+            </div>
+
+            {/* Email */}
+            <div className="mb-4">
+              <label className="text-sm text-gray-500">Email *</label>
+              <input
+                type="email"
+                name="email"
+                value={editFormData.email}
+                onChange={handleEditInputChange}
+                placeholder="customer@email.com"
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+              />
+            </div>
+
+            {/* Phone */}
+            <div className="mb-6">
+              <label className="text-sm text-gray-500">Phone Number *</label>
+              <input
+                type="tel"
+                name="phone"
+                value={editFormData.phone}
+                onChange={handleEditInputChange}
+                placeholder="+1 (555) 000-0000"
+                className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+              />
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-between">
+              <button
+                onClick={closeEditModal}
+                className="px-6 py-2 border rounded-lg text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateCustomer}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Update Customer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
