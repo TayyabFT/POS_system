@@ -23,33 +23,26 @@ import {
 import Sidebar from "./Sidebar";
 import Navbar from "./navbar";
 import API_BASE_URL from "@/apiconfig/API_BASE_URL";
+import CustomerModal from "./pos/CustomerModal";
 
 export default function MerchandisePage() {
   const [selectedCategory, setSelectedCategory] = useState("All Product");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedFilter, setSelectedFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [cartItems, setCartItems] = useState([]);
   const [selectedSize, setSelectedSize] = useState({});
-  const [isOpen, setIsOpen] = useState(false);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [products, setProducts] = useState([]);
-  const [customers, setCustomers] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [newCustomer, setNewCustomer] = useState({
-    full_name: "",
-    email: "",
-    phone_number: ""
-  });
   const router = useRouter();
 
   useEffect(() => {
     fetchProducts();
-    fetchCustomers();
   }, []);
 
   const fetchProducts = async () => {
@@ -64,11 +57,9 @@ export default function MerchandisePage() {
       const data = await response.json();
       
       if (data.success) {
-        // Filter only merchandise (is_merchandise: true)
         const merchandiseProducts = data.message.filter(product => product.is_merchandise === true);
         setProducts(merchandiseProducts);
         
-        // Extract unique categories from products
         const uniqueCategories = [...new Set(merchandiseProducts.map(product => product.category_name))];
         setCategories([
           { name: "All Product", count: merchandiseProducts.length, icon: "📦" },
@@ -84,7 +75,6 @@ export default function MerchandisePage() {
     } catch (err) {
       setError(err.message);
       console.error("Error fetching products:", err);
-      // Fallback to sample data if API fails
       setProducts([
         {
           id: 1,
@@ -111,95 +101,6 @@ export default function MerchandisePage() {
       ]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchCustomers = async () => {
-    try {
-      const userId = localStorage.getItem("userid");
-      if (!userId) {
-        throw new Error("User ID not found");
-      }
-
-      const response = await fetch(`${API_BASE_URL}/getcustomers/${userId}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setCustomers(data.data || []);
-      } else {
-        throw new Error(data.message || 'Failed to fetch customers');
-      }
-    } catch (err) {
-      console.error("Error fetching customers:", err);
-      // Fallback to sample data if API fails
-      setCustomers([
-        {
-          id: 1,
-          full_name: "Molly Vaughan",
-          phone: "(405) 555-0128",
-          email: "molly@mail.com",
-          img: "https://i.pravatar.cc/150?img=1",
-        },
-        {
-          id: 2,
-          full_name: "Kathrinee Moss",
-          phone: "(209) 555-0104",
-          email: "kath@mail.com",
-          img: "https://i.pravatar.cc/150?img=2",
-        }
-      ]);
-    }
-  };
-
-  const addCustomer = async () => {
-    try {
-      const userId = localStorage.getItem("userid");
-      if (!userId) {
-        throw new Error("User ID not found");
-      }
-
-      const response = await fetch(`${API_BASE_URL}/addcustomer/${userId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newCustomer),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      
-      if (data.success) {
-        // Add the new customer to the list
-        const createdCustomer = {
-          id: data.data?.id || Date.now(),
-          full_name: newCustomer.full_name,
-          phone: newCustomer.phone_number,
-          email: newCustomer.email,
-          img: `https://i.pravatar.cc/150?img=${customers.length + 3}`
-        };
-        
-        setCustomers([...customers, createdCustomer]);
-        setSelectedCustomer(createdCustomer);
-        setNewCustomer({ full_name: "", email: "", phone_number: "" });
-        setIsCreateModalOpen(false);
-        setIsOpen(false);
-        
-        alert('Customer created successfully!');
-      } else {
-        throw new Error(data.message || 'Failed to create customer');
-      }
-    } catch (err) {
-      console.error("Error creating customer:", err);
-      alert(`Failed to create customer: ${err.message}`);
     }
   };
 
@@ -289,87 +190,81 @@ export default function MerchandisePage() {
 
   const { subtotal, tax, total } = calculateTotal();
 
-  const handleCreateOrder = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const userId = localStorage.getItem("userid");
-      
-      if (!userId) {
-        throw new Error("User ID not found. Please log in again.");
-      }
-
-      if (!selectedCustomer) {
-        throw new Error("Please select a customer first.");
-      }
-
-      if (cartItems.length === 0) {
-        throw new Error("Please add at least one product to the cart.");
-      }
-
-      const orderData = {
-        is_merchandise: true,
-        customer_name: selectedCustomer.full_name,
-        phone_number: selectedCustomer.phone,
-        dining: false,
-        pickup: false,
-        delivery: false,
-        discount: 0,
-        selected_items: cartItems.map(item => ({
-          id: item.id,
-          size: item.size,
-          quantity: item.quantity,
-          product_name: item.product_name,
-          price: item.price
-        })),
-        subtotal: subtotal,
-        tax: tax,
-        total_amount: total
-      };
-
-      const response = await fetch(`${API_BASE_URL}/addorder/${userId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(orderData),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        alert('Order created successfully!');
-        setCartItems([]);
-        setSelectedCustomer(null);
-        router.push('/payment');
-      } else {
-        throw new Error(data.message || 'Failed to create order');
-      }
-    } catch (err) {
-      setError(err.message);
-      console.error("Error creating order:", err);
-      alert(`Error: ${err.message}`);
-    } finally {
-      setLoading(false);
+ const handleCreateOrder = async () => {
+  try {
+    setLoading(true);
+    setError(null);
+    
+    const userId = localStorage.getItem("userid");
+    
+    if (!userId) {
+      throw new Error("User ID not found. Please log in again.");
     }
-  };
+
+    if (!selectedCustomer) {
+      throw new Error("Please select a customer first.");
+    }
+
+    if (cartItems.length === 0) {
+      throw new Error("Please add at least one product to the cart.");
+    }
+
+    const orderData = {
+      is_merchandise: true,
+      customer_name: selectedCustomer.full_name,
+      phone_number: selectedCustomer.phone,
+      customer_id: selectedCustomer.id, // Add customer ID here
+      dining: false,
+      pickup: false,
+      delivery: false,
+      discount: 0,
+      selected_items: cartItems.map(item => ({
+        id: item.id,
+        size: item.size,
+        quantity: item.quantity,
+        product_name: item.product_name,
+        price: item.price
+      })),
+      subtotal: subtotal,
+      tax: tax,
+      total_amount: total
+    };
+
+    const response = await fetch(`${API_BASE_URL}/addorder/${userId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(orderData),
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const data = await response.json();
+    
+    if (data.success) {
+      alert('Order created successfully!');
+      setCartItems([]);
+      setSelectedCustomer(null);
+      router.push('/payment');
+    } else {
+      throw new Error(data.message || 'Failed to create order');
+    }
+  } catch (err) {
+    setError(err.message);
+    console.error("Error creating order:", err);
+    alert(`Error: ${err.message}`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleAddCustomerToOrder = (customer) => {
     setSelectedCustomer(customer);
-    setIsOpen(false);
-  };
-
-  const handleNewCustomerChange = (e) => {
-    const { name, value } = e.target;
-    setNewCustomer({
-      ...newCustomer,
-      [name]: value
-    });
+    setIsCustomerModalOpen(false);
+    setIsCreateModalOpen(false);
   };
 
   return (
@@ -531,11 +426,9 @@ export default function MerchandisePage() {
                 <div className="mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <img
-                        src={selectedCustomer.img}
-                        alt={selectedCustomer.full_name}
-                        className="w-8 h-8 rounded-full object-cover"
-                      />
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                        {selectedCustomer.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'C'}
+                      </div>
                       <div>
                         <div className="font-medium">{selectedCustomer.full_name}</div>
                         <div className="text-xs text-gray-600">{selectedCustomer.phone}</div>
@@ -553,162 +446,22 @@ export default function MerchandisePage() {
 
               <div className="flex gap-2 mb-6">
                 <button
-                  onClick={() => setIsOpen(true)}
+                  onClick={() => setIsCustomerModalOpen(true)}
                   className="flex-1 flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-3 py-2 rounded-lg transition"
                 >
                   <FiUserPlus size={16} /> {selectedCustomer ? "Change Customer" : "Add Customer"}
                 </button>
               </div>
               
-              {isOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                  <div className="bg-white rounded-xl w-full max-w-lg shadow-lg p-6 relative">
-                    {/* Close button */}
-                    <button
-                      onClick={() => setIsOpen(false)}
-                      className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-                    >
-                      <FiX size={20} />
-                    </button>
-
-                    {/* Title */}
-                    <h2 className="text-lg font-semibold">Add Customer</h2>
-
-                    {/* Search + Create */}
-                    <div className="flex items-center gap-3 mt-4">
-                      <div className="flex items-center flex-1 border rounded-lg px-3 py-2 bg-gray-50">
-                        <FiSearch className="text-gray-400" />
-                        <input
-                          type="text"
-                          placeholder="Search customer"
-                          className="bg-transparent outline-none px-2 w-full text-sm"
-                        />
-                      </div>
-                      <button
-                        onClick={() => setIsCreateModalOpen(true)}
-                        className="flex items-center gap-1 px-3 py-2 border rounded-lg hover:bg-gray-100 text-sm"
-                      >
-                        <FiPlus size={14} /> Create Customer
-                      </button>
-                    </div>
-
-                    {/* Customer List */}
-                    <div className="mt-5">
-                      <h3 className="text-sm text-gray-500 mb-3">
-                        All Customers
-                      </h3>
-                      <div className="space-y-3">
-                        {customers.map((customer) => (
-                          <div
-                            key={customer.id}
-                            className="flex items-center justify-between border rounded-lg px-3 py-3 hover:bg-gray-50 transition"
-                          >
-                            <div className="flex items-center gap-3">
-                              <img
-                                src={customer.img}
-                                alt={customer.full_name}
-                                className="w-10 h-10 rounded-full object-cover"
-                              />
-                              <div>
-                                <div className="font-medium">{customer.full_name}</div>
-                                <div className="flex items-center text-xs text-gray-500 gap-3 mt-0.5">
-                                  <span className="flex items-center gap-1">
-                                    <FiPhone /> {customer.phone}
-                                  </span>
-                                  <span className="flex items-center gap-1">
-                                    <FiMail /> {customer.email}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <button 
-                              onClick={() => handleAddCustomerToOrder(customer)}
-                              className="text-blue-600 text-sm hover:underline"
-                            >
-                              + Add to order
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              
-              {isOpen && isCreateModalOpen && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                  <div className="bg-white rounded-xl w-full max-w-md shadow-lg p-6 relative">
-                    {/* Close button */}
-                    <button
-                      onClick={() => setIsCreateModalOpen(false)}
-                      className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
-                    >
-                      <FiX size={20} />
-                    </button>
-
-                    {/* Title */}
-                    <h2 className="text-lg font-semibold mb-4">
-                      Create New Customer
-                    </h2>
-
-                    {/* Name */}
-                    <div className="mb-4">
-                      <label className="text-sm text-gray-500">Full Name *</label>
-                      <input
-                        type="text"
-                        name="full_name"
-                        value={newCustomer.full_name}
-                        onChange={handleNewCustomerChange}
-                        placeholder="Customer name"
-                        className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-
-                    {/* Email */}
-                    <div className="mb-4">
-                      <label className="text-sm text-gray-500">Email *</label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={newCustomer.email}
-                        onChange={handleNewCustomerChange}
-                        placeholder="customer@email.com"
-                        className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-
-                    {/* Phone */}
-                    <div className="mb-6">
-                      <label className="text-sm text-gray-500">
-                        Phone Number *
-                      </label>
-                      <input
-                        type="tel"
-                        name="phone_number"
-                        value={newCustomer.phone_number}
-                        onChange={handleNewCustomerChange}
-                        placeholder="+1 (555) 000-0000"
-                        className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
-                      />
-                    </div>
-
-                    {/* Buttons */}
-                    <div className="flex justify-between">
-                      <button
-                        onClick={() => setIsCreateModalOpen(false)}
-                        className="px-6 py-2 border rounded-lg text-gray-700 hover:bg-gray-100"
-                      >
-                        Back
-                      </button>
-                      <button
-                        onClick={addCustomer}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-                      >
-                        Create Customer
-                      </button>
-                    </div>
-                  </div>
-                </div>
+              {/* Customer Modal */}
+              {isCustomerModalOpen && (
+                <CustomerModal
+                  isOpen={isCustomerModalOpen}
+                  setIsOpen={setIsCustomerModalOpen}
+                  isCreateModalOpen={isCreateModalOpen}
+                  setIsCreateModalOpen={setIsCreateModalOpen}
+                  onCustomerSelect={handleAddCustomerToOrder}
+                />
               )}
 
               {/* Cart Items */}
@@ -812,7 +565,7 @@ export default function MerchandisePage() {
           <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl relative">
             <button
               onClick={() => setShowAddProductModal(false)}
-              className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
+              className="absolute top-4 right-4 text-gray-500 hover:gray-700 z-10"
             >
               <FiX size={20} />
             </button>

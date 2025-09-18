@@ -19,7 +19,9 @@ import {
   FiMenu,
   FiBell,
   FiChevronDown,
-  FiRefreshCw
+  FiRefreshCw,
+  FiAward,
+  FiStar
 } from "react-icons/fi";
 import { 
   LineChart, 
@@ -45,6 +47,7 @@ const CustomersPage = () => {
     average_spending: 0
   });
   const [customers, setCustomers] = useState([]);
+  const [topCustomers, setTopCustomers] = useState([]);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [editFormData, setEditFormData] = useState({
@@ -57,6 +60,7 @@ const CustomersPage = () => {
   useEffect(() => {
     fetchCustomerStats();
     fetchCustomers();
+    fetchTopCustomers();
   }, []);
 
   const fetchCustomerStats = async () => {
@@ -83,7 +87,6 @@ const CustomersPage = () => {
     } catch (err) {
       setError(err.message);
       console.error("Error fetching customer stats:", err);
-      // Fallback to sample data if API fails
       setCustomerStats({
         total_customers: 1254,
         new_customers_current_month: 85,
@@ -114,15 +117,44 @@ const CustomersPage = () => {
       }
     } catch (err) {
       console.error("Error fetching customers:", err);
-      // Fallback to sample data if API fails
       setCustomers([
-        { id: 1, full_name: "John Doe", email: "john.doe@example.com", phone: "+1 234-567-8901" },
-        { id: 2, full_name: "Sarah Smith", email: "sarah.smith@example.com", phone: "+1 345-678-9012" },
-        { id: 3, full_name: "Michael Johnson", email: "michael.j@example.com", phone: "+1 456-789-0123" },
-        { id: 4, full_name: "Emily Wilson", email: "emily.w@example.com", phone: "+1 567-890-1234" }
+        { id: 1, full_name: "John Doe", email: "john.doe@example.com", phone: "+1 234-567-8901", total_spent: "250.50" },
+        { id: 2, full_name: "Sarah Smith", email: "sarah.smith@example.com", phone: "+1 345-678-9012", total_spent: "1890.25" },
+        { id: 3, full_name: "Michael Johnson", email: "michael.j@example.com", phone: "+1 456-789-0123", total_spent: "2450.75" },
+        { id: 4, full_name: "Emily Wilson", email: "emily.w@example.com", phone: "+1 567-890-1234", total_spent: "675.30" }
       ]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchTopCustomers = async () => {
+    try {
+      const userId = localStorage.getItem("userid");
+      if (!userId) {
+        throw new Error("User ID not found");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/gettopcustomer/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        setTopCustomers(data.data || []);
+      } else {
+        throw new Error(data.message || 'Failed to fetch top customers');
+      }
+    } catch (err) {
+      console.error("Error fetching top customers:", err);
+      setTopCustomers([
+        { id: 1, full_name: "John Doe", email: "john.doe@example.com", total_spent: "250.50" },
+        { id: 2, full_name: "Sarah Smith", email: "sarah.smith@example.com", total_spent: "1890.25" },
+        { id: 3, full_name: "Michael Johnson", email: "michael.j@example.com", total_spent: "2450.75" }
+      ]);
     }
   };
 
@@ -143,10 +175,9 @@ const CustomersPage = () => {
       const data = await response.json();
       
       if (data.success) {
-        // Remove the customer from the local state
         setCustomers(customers.filter(customer => customer.id !== customerId));
+        setTopCustomers(topCustomers.filter(customer => customer.id !== customerId));
         alert('Customer deleted successfully!');
-        // Refresh stats
         fetchCustomerStats();
       } else {
         throw new Error(data.message || 'Failed to delete customer');
@@ -204,8 +235,12 @@ const CustomersPage = () => {
       const data = await response.json();
       
       if (data.success) {
-        // Update the customer in the local state
         setCustomers(customers.map(customer => 
+          customer.id === editingCustomer.id 
+            ? { ...customer, ...editFormData }
+            : customer
+        ));
+        setTopCustomers(topCustomers.map(customer => 
           customer.id === editingCustomer.id 
             ? { ...customer, ...editFormData }
             : customer
@@ -380,6 +415,57 @@ const CustomersPage = () => {
             </div>
           </div>
 
+          {/* Top Customers Section */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex justify-between items-center">
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <FiAward className="text-yellow-500" /> Top Customers of the Week
+                </h2>
+                <button 
+                  onClick={fetchTopCustomers}
+                  className="flex items-center text-sm text-gray-500 hover:text-gray-700"
+                >
+                  <FiRefreshCw className="mr-1 w-4 h-4" /> Refresh
+                </button>
+              </div>
+            </div>
+            <div className="p-6">
+              {topCustomers.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {topCustomers.map((customer, index) => (
+                    <div key={customer.id} className="border rounded-lg p-4 hover:shadow-md transition">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
+                            {customer.full_name?.charAt(0) || 'C'}
+                          </div>
+                          <div>
+                            <div className="font-medium">{customer.full_name}</div>
+                            <div className="text-sm text-gray-500">{customer.email}</div>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1 text-yellow-500">
+                          <FiStar className="w-4 h-4 fill-current" />
+                          <span className="text-sm font-medium">{index + 1}</span>
+                        </div>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm text-gray-600">Total Spent</span>
+                        <span className="font-bold text-green-600">${parseFloat(customer.total_spent).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center text-gray-500 py-8">
+                  <FiAward className="w-12 h-12 mx-auto mb-2 opacity-70" />
+                  <p>No top customers data available</p>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
             {/* Customer Spending Chart */}
@@ -503,6 +589,12 @@ const CustomersPage = () => {
                       Contact Info
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Additional Info
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total Spent
+                    </th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -517,7 +609,7 @@ const CustomersPage = () => {
                           </div>
                           <div className="ml-4">
                             <div className="text-sm font-medium text-gray-900">{customer.full_name}</div>
-                            <div className="text-sm text-gray-500">Customer ID: #{customer.id}</div>
+                            <div className="text-sm text-gray-500">ID: #{customer.id}</div>
                           </div>
                         </div>
                       </td>
@@ -527,6 +619,21 @@ const CustomersPage = () => {
                         </div>
                         <div className="text-sm text-gray-500 flex items-center">
                           <FiPhone className="mr-1 text-gray-400" /> {customer.phone}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-600">
+                          {customer.occupation && (
+                            <div className="mb-1">Occupation: {customer.occupation}</div>
+                          )}
+                          {customer.social && (
+                            <div>Social: {customer.social}</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-green-600">
+                          ${parseFloat(customer.total_spent || 0).toFixed(2)}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
