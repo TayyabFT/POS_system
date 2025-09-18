@@ -665,7 +665,7 @@ const CustomersPage = () => {
                 <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50" disabled>
                   Previous
                 </button>
-                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 bg-black text-white font-medium">
+                <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 bg-black font-medium">
                   1
                 </button>
                 <button className="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50">
