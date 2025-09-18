@@ -1,4 +1,4 @@
-import { FiX, FiSearch, FiPlus, FiPhone, FiMail, FiRefreshCw, FiCheck } from "react-icons/fi";
+import { FiX, FiSearch, FiPlus, FiPhone, FiMail, FiRefreshCw, FiCheck, FiBriefcase, FiHeart, FiUsers, FiInstagram } from "react-icons/fi";
 import { useState, useEffect } from "react";
 import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
@@ -48,9 +48,9 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
   };
 
   const filteredCustomers = customers.filter(customer =>
-    customer.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.phone.includes(searchQuery)
+    customer.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.phone?.includes(searchQuery)
   );
 
   if (!isOpen) return null;
@@ -122,20 +122,35 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center text-white font-bold">
-                      {customer.full_name.split(' ').map(n => n[0]).join('').toUpperCase()}
+                      {customer.full_name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2) || 'C'}
                     </div>
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium">{customer.full_name}</span>
+                        <span className="font-medium truncate">{customer.full_name}</span>
                       </div>
-                      <div className="flex items-center text-xs text-gray-500 gap-3 mt-0.5">
+                      <div className="flex items-center text-xs text-gray-500 gap-3 mt-0.5 flex-wrap">
                         <span className="flex items-center gap-1">
-                          <FiPhone /> {customer.phone}
+                          <FiPhone /> {customer.phone || 'No phone'}
                         </span>
                         <span className="flex items-center gap-1">
-                          <FiMail /> {customer.email}
+                          <FiMail /> {customer.email || 'No email'}
                         </span>
                       </div>
+                      {/* Additional customer info */}
+                      {(customer.occupation || customer.social) && (
+                        <div className="flex items-center text-xs text-gray-400 gap-3 mt-1">
+                          {customer.occupation && (
+                            <span className="flex items-center gap-1">
+                              <FiBriefcase size={10} /> {customer.occupation}
+                            </span>
+                          )}
+                          {customer.social && (
+                            <span className="flex items-center gap-1">
+                              <FiInstagram size={10} /> {customer.social}
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                   <FiCheck className="text-blue-600" />
@@ -179,22 +194,37 @@ const CustomerModal = ({ isOpen, setIsOpen, isCreateModalOpen, setIsCreateModalO
 };
 
 const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreated, onCustomerSelect }) => {
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [formData, setFormData] = useState({
+    full_name: "",
+    email: "",
+    phone_number: "",
+    birthday: "",
+    occupation: "",
+    married: "",
+    kids: "",
+    social: ""
+  });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
   const handleCreateCustomer = async () => {
     // Basic validation
-    if (!name.trim() || !email.trim() || !phone.trim()) {
-      setError("Please fill in all fields");
+    if (!formData.full_name.trim() || !formData.email.trim() || !formData.phone_number.trim()) {
+      setError("Please fill in all required fields (Name, Email, Phone)");
       return;
     }
 
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!emailRegex.test(formData.email)) {
       setError("Please enter a valid email address");
       return;
     }
@@ -210,16 +240,23 @@ const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreate
         throw new Error("User ID not found. Please log in again.");
       }
 
+      const requestBody = {
+        full_name: formData.full_name,
+        email: formData.email,
+        phone_number: formData.phone_number,
+        birthday: formData.birthday || null,
+        occupation: formData.occupation || null,
+        married: formData.married === "true" ? true : formData.married === "false" ? false : null,
+        kids: formData.kids ? parseInt(formData.kids) : null,
+        social: formData.social || null
+      };
+
       const response = await fetch(`${API_BASE_URL}/addcustomer/${userId}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          full_name: name,
-          email: email,
-          phone_number: phone,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
@@ -231,9 +268,14 @@ const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreate
       // Create a customer object to pass to the parent
       const newCustomer = {
         id: data.customer_id || Date.now(),
-        full_name: name,
-        email: email,
-        phone: phone
+        full_name: formData.full_name,
+        email: formData.email,
+        phone: formData.phone_number,
+        birthday: formData.birthday,
+        occupation: formData.occupation,
+        married: formData.married === "true",
+        kids: formData.kids ? parseInt(formData.kids) : null,
+        social: formData.social
       };
 
       // Select the newly created customer
@@ -249,9 +291,16 @@ const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreate
       // Close modals and reset form
       setIsCreateModalOpen(false);
       setIsOpen(false);
-      setName("");
-      setEmail("");
-      setPhone("");
+      setFormData({
+        full_name: "",
+        email: "",
+        phone_number: "",
+        birthday: "",
+        occupation: "",
+        married: "",
+        kids: "",
+        social: ""
+      });
       
     } catch (err) {
       setError(err.message);
@@ -263,7 +312,7 @@ const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreate
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl w-full max-w-md shadow-lg p-6 relative">
+      <div className="bg-white rounded-xl w-full max-w-md shadow-lg p-6 relative max-h-[90vh] overflow-y-auto">
         <button
           onClick={() => setIsCreateModalOpen(false)}
           className="absolute top-4 right-4 text-gray-500 hover:text-gray-700"
@@ -279,40 +328,123 @@ const CreateCustomerModal = ({ setIsCreateModalOpen, setIsOpen, onCustomerCreate
           </div>
         )}
 
-        <div className="mb-4">
-          <label className="text-sm text-gray-500">Full Name</label>
-          <input
-            type="text"
-            placeholder="Enter full name"
-            className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-          />
+        <div className="space-y-4">
+          {/* Required Fields */}
+          <div>
+            <label className="text-sm text-gray-500">Full Name *</label>
+            <input
+              type="text"
+              name="full_name"
+              placeholder="Enter full name"
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={formData.full_name}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">Email *</label>
+            <input
+              type="email"
+              name="email"
+              placeholder="Enter email address"
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">Phone Number *</label>
+            <input
+              type="tel"
+              name="phone_number"
+              placeholder="+1 (555) 000-0000"
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={formData.phone_number}
+              onChange={handleInputChange}
+              required
+            />
+          </div>
+
+          {/* Optional Fields */}
+          <div>
+            <label className="text-sm text-gray-500">Birthday</label>
+            <div className="relative mt-1">
+              <input
+                type="date"
+                name="birthday"
+                className="w-full border rounded-lg px-3 py-2 pl-10 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+                value={formData.birthday}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">Occupation</label>
+            <div className="relative mt-1">
+              <FiBriefcase className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                name="occupation"
+                placeholder="Enter occupation"
+                className="w-full border rounded-lg px-3 py-2 pl-10 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+                value={formData.occupation}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">Marital Status</label>
+            <select
+              name="married"
+              className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+              value={formData.married}
+              onChange={handleInputChange}
+            >
+              <option value="">Select status</option>
+              <option value="true">Married</option>
+              <option value="false">Single</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">Number of Kids</label>
+            <div className="relative mt-1">
+              <FiUsers className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="number"
+                name="kids"
+                placeholder="0"
+                min="0"
+                className="w-full border rounded-lg px-3 py-2 pl-10 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+                value={formData.kids}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="text-sm text-gray-500">Social Media Handle</label>
+            <div className="relative mt-1">
+              <FiInstagram className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                name="social"
+                placeholder="@username"
+                className="w-full border rounded-lg px-3 py-2 pl-10 text-sm outline-none focus:ring-1 focus:ring-black focus:border-black"
+                value={formData.social}
+                onChange={handleInputChange}
+              />
+            </div>
+          </div>
         </div>
 
-        <div className="mb-4">
-          <label className="text-sm text-gray-500">Email</label>
-          <input
-            type="email"
-            placeholder="Enter email address"
-            className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div className="mb-6">
-          <label className="text-sm text-gray-500">Phone Number</label>
-          <input
-            type="tel"
-            placeholder="+1 (555) 000-0000"
-            className="mt-1 w-full border rounded-lg px-3 py-2 text-sm outline-none"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-          />
-        </div>
-
-        <div className="flex justify-between">
+        <div className="flex justify-between mt-6">
           <button
             onClick={() => setIsCreateModalOpen(false)}
             className="px-6 py-2 border rounded-lg text-gray-700 hover:bg-gray-100"

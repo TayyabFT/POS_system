@@ -1,4 +1,11 @@
-import { FiUserPlus, FiGrid, FiTag, FiEdit, FiShoppingCart, FiTrash2 } from "react-icons/fi";
+import {
+  FiUserPlus,
+  FiGrid,
+  FiTag,
+  FiEdit,
+  FiShoppingCart,
+  FiTrash2,
+} from "react-icons/fi";
 import { useState } from "react";
 import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
@@ -23,7 +30,7 @@ const OrderSummary = ({
   discount,
   setDiscount,
   orderNote,
-  setOrderNote
+  setOrderNote,
 }) => {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
@@ -37,37 +44,59 @@ const OrderSummary = ({
 
       // Get user ID from localStorage
       const userId = localStorage.getItem("userid");
-      
+
       if (!userId) {
         throw new Error("User ID not found. Please log in again.");
       }
 
       // Prepare order data based on order type
       const orderData = {
-        customer_name: selectedCustomer ? selectedCustomer.full_name : "Walk-in Customer",
+        customer_name: selectedCustomer
+          ? selectedCustomer.full_name
+          : "Walk-in Customer",
         phone_number: selectedCustomer ? selectedCustomer.phone : "",
+        customer_id: selectedCustomer ? selectedCustomer.id : null,
+
         dining: orderType === "Dine in",
         pickup: orderType === "Pickup",
         delivery: orderType === "Delivery",
-        table_number: orderType === "Dine in" && selectedTable ? selectedTable : null,
-        pickup_date: orderType === "Pickup" && pickupDetails ? pickupDetails.date : null,
-        pickup_time: orderType === "Pickup" && pickupDetails ? pickupDetails.time : null,
-        delivery_channel: orderType === "Delivery" && deliveryDetails ? deliveryDetails.channel : null,
-        delivery_date: orderType === "Delivery" && deliveryDetails ? deliveryDetails.date : null,
-        delivery_time: orderType === "Delivery" && deliveryDetails ? deliveryDetails.time : null,
-        delivery_address: orderType === "Delivery" && deliveryDetails ? deliveryDetails.address : null,
-        delivery_instruction: orderType === "Delivery" && deliveryDetails ? deliveryDetails.instruction : null,
+        table_number:
+          orderType === "Dine in" && selectedTable ? selectedTable : null,
+        pickup_date:
+          orderType === "Pickup" && pickupDetails ? pickupDetails.date : null,
+        pickup_time:
+          orderType === "Pickup" && pickupDetails ? pickupDetails.time : null,
+        delivery_channel:
+          orderType === "Delivery" && deliveryDetails
+            ? deliveryDetails.channel
+            : null,
+        delivery_date:
+          orderType === "Delivery" && deliveryDetails
+            ? deliveryDetails.date
+            : null,
+        delivery_time:
+          orderType === "Delivery" && deliveryDetails
+            ? deliveryDetails.time
+            : null,
+        delivery_address:
+          orderType === "Delivery" && deliveryDetails
+            ? deliveryDetails.address
+            : null,
+        delivery_instruction:
+          orderType === "Delivery" && deliveryDetails
+            ? deliveryDetails.instruction
+            : null,
         discount: discount || 0,
         order_note: orderNote || "",
-        selected_items: orderItems.map(item => ({
+        selected_items: orderItems.map((item) => ({
           id: item.id,
           product_name: item.name,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
         })),
         subtotal: subtotal,
         tax: tax,
-        total_amount: total
+        total_amount: total,
       };
 
       const response = await fetch(`${API_BASE_URL}/addorder/${userId}`, {
@@ -87,7 +116,6 @@ const OrderSummary = ({
       // Success - show confirmation and reset order
       alert("Order saved successfully!");
       // You might want to clear the order items here or navigate to orders list
-      
     } catch (err) {
       setSaveError(err.message);
       console.error("Error saving order:", err);
@@ -154,10 +182,12 @@ const OrderSummary = ({
             onClick={() => setIsOpen(true)}
             className="flex-1 flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-3 py-2 rounded-lg transition"
           >
-            <FiUserPlus size={16} /> {selectedCustomer ? selectedCustomer.full_name : "Add Customer"}
+            <FiUserPlus size={16} />{" "}
+            {selectedCustomer ? selectedCustomer.full_name : "Add Customer"}
           </button>
           <button className="flex-1 flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-3 py-2 rounded-lg transition">
-            <FiGrid size={16} /> {selectedTable ? `Table ${selectedTable}` : "Select Table"}
+            <FiGrid size={16} />{" "}
+            {selectedTable ? `Table ${selectedTable}` : "Select Table"}
           </button>
         </div>
 
@@ -177,9 +207,7 @@ const OrderSummary = ({
                     <FiTrash2 size={16} />
                   </button>
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">
-                      {item.name}
-                    </div>
+                    <div className="font-medium truncate">{item.name}</div>
                     <div className="text-sm text-gray-500">
                       ${item.price.toFixed(2)}
                     </div>
@@ -205,10 +233,7 @@ const OrderSummary = ({
           </div>
         ) : (
           <div className="bg-gray-100 p-6 rounded-lg text-center text-gray-500 mb-6 border border-dashed border-gray-400">
-            <FiShoppingCart
-              size={24}
-              className="mx-auto mb-2 opacity-70"
-            />
+            <FiShoppingCart size={24} className="mx-auto mb-2 opacity-70" />
             <p className="font-medium">No items selected</p>
             <p className="text-sm">
               Select items from the menu to add to order
@@ -222,10 +247,14 @@ const OrderSummary = ({
             onClick={() => setShowModal(true)}
             className="w-full flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-4 py-3 rounded-lg transition"
           >
-            <FiTag size={16} /> {discount > 0 ? `Discount: $${discount.toFixed(2)}` : "Add Discount"}
+            <FiTag size={16} />{" "}
+            {discount > 0
+              ? `Discount: $${discount.toFixed(2)}`
+              : "Add Discount"}
           </button>
           <button className="w-full flex items-center justify-center gap-2 text-sm bg-white border border-gray-300 hover:border-black px-4 py-3 rounded-lg transition">
-            <FiEdit size={16} /> {orderNote ? "Edit Order Note" : "Add Order Note"}
+            <FiEdit size={16} />{" "}
+            {orderNote ? "Edit Order Note" : "Add Order Note"}
           </button>
         </div>
       </div>
@@ -237,7 +266,7 @@ const OrderSummary = ({
             {saveError}
           </div>
         )}
-        
+
         <div className="space-y-3 mb-4">
           <div className="flex justify-between text-gray-600">
             <span>Sub Total</span>
