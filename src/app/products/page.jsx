@@ -78,6 +78,17 @@ const addProduct = async (productData, userId) => {
     if (productData.barcode) formData.append('barcode', productData.barcode);
     if (productData.status) formData.append('status', productData.status);
     
+    // Add event_dates if it's an event
+    if (productData.is_event && productData.event_dates && productData.event_dates.length > 0) {
+      // Convert the event_dates array to the format expected by the server
+      const eventDatesForAPI = productData.event_dates.map(event => ({
+        date: event.date,
+        time: event.time,
+        datetime: event.datetime
+      }));
+      formData.append('event_dates', JSON.stringify(eventDatesForAPI));
+    }
+    
     if (productData.image) {
       formData.append('image', productData.image);
     }
@@ -115,6 +126,17 @@ const updateProduct = async (productId, productData, userId) => {
     formData.append('status', productData.status);
     formData.append('is_event', productData.is_event ? 'true' : 'false');
     formData.append('is_merchandise', productData.is_merchandise ? 'true' : 'false');
+    
+    // Add event_dates if it's an event
+    if (productData.is_event && productData.event_dates && productData.event_dates.length > 0) {
+      // Convert the event_dates array to the format expected by the server
+      const eventDatesForAPI = productData.event_dates.map(event => ({
+        date: event.date,
+        time: event.time,
+        datetime: event.datetime
+      }));
+      formData.append('event_dates', JSON.stringify(eventDatesForAPI));
+    }
     
     if (productData.image && productData.image instanceof File) {
       formData.append('image', productData.image);
@@ -171,7 +193,8 @@ const fetchProducts = async () => {
       image: product.image_url,
       category_name: product.category_name,
       is_event: product.is_event || false,
-      is_merchandise: product.is_merchandise || false
+      is_merchandise: product.is_merchandise || false,
+      event_dates: product.event_dates || []
     }));
   } catch (error) {
     console.error('Error fetching products:', error);
@@ -205,12 +228,15 @@ const ProductPage = () => {
     stock: '',
     status: 'Active',
     is_event: false,
-    is_merchandise: false
+    is_merchandise: false,
+    event_dates: []
   });
 
   const [errors, setErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [newEventDate, setNewEventDate] = useState('');
+  const [newEventTime, setNewEventTime] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -263,6 +289,9 @@ const ProductPage = () => {
     if (!newProduct.cost || isNaN(newProduct.cost)) newErrors.cost = 'Valid cost is required';
     if (!newProduct.stock || isNaN(newProduct.stock)) newErrors.stock = 'Valid stock quantity is required';
     if (!newProduct.sku) newErrors.sku = 'SKU is required';
+    if (newProduct.is_event && (!newProduct.event_dates || newProduct.event_dates.length === 0)) {
+      newErrors.event_dates = 'At least one event date and time is required';
+    }
     if (!newProduct.is_event && !newProduct.is_merchandise && !imageFile && !isEditMode) {
       newErrors.image = 'Product image is required';
     }
@@ -331,7 +360,8 @@ const ProductPage = () => {
       stock: product.stock?.toString() || '',
       status: product.status || 'Active',
       is_event: product.is_event || false,
-      is_merchandise: product.is_merchandise || false
+      is_merchandise: product.is_merchandise || false,
+      event_dates: product.event_dates || []
     });
     
     setCurrentProductId(product.id);
@@ -376,6 +406,38 @@ const ProductPage = () => {
     }
   };
 
+  const addEventDate = () => {
+    if (newEventDate && newEventTime) {
+      const dateTimeString = `${newEventDate}T${newEventTime}`;
+      const eventDateTime = {
+        date: newEventDate,
+        time: newEventTime,
+        datetime: dateTimeString
+      };
+      
+      // Check if this exact date and time combination already exists
+      const exists = newProduct.event_dates.some(event => 
+        event.date === newEventDate && event.time === newEventTime
+      );
+      
+      if (!exists) {
+        setNewProduct(prev => ({
+          ...prev,
+          event_dates: [...prev.event_dates, eventDateTime]
+        }));
+        setNewEventDate('');
+        setNewEventTime('');
+      }
+    }
+  };
+
+  const removeEventDate = (dateTimeToRemove) => {
+    setNewProduct(prev => ({
+      ...prev,
+      event_dates: prev.event_dates.filter(event => event !== dateTimeToRemove)
+    }));
+  };
+
   const resetForm = () => {
     setNewProduct({
       product_name: '',
@@ -388,10 +450,13 @@ const ProductPage = () => {
       stock: '',
       status: 'Active',
       is_event: false,
-      is_merchandise: false
+      is_merchandise: false,
+      event_dates: []
     });
     setImagePreview(null);
     setImageFile(null);
+    setNewEventDate('');
+    setNewEventTime('');
     setErrors({});
     setIsEditMode(false);
     setCurrentProductId(null);
@@ -719,6 +784,83 @@ const ProductPage = () => {
                       </label>
                     </div>
                   </div>
+
+                  {/* Event Dates & Times - Only show for events */}
+                  {newProduct.is_event && (
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Event Dates & Times *
+                      </label>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <input
+                          type="date"
+                          value={newEventDate}
+                          onChange={(e) => setNewEventDate(e.target.value)}
+                          className="rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                          placeholder="Select Date"
+                        />
+                        <input
+                          type="time"
+                          value={newEventTime}
+                          onChange={(e) => setNewEventTime(e.target.value)}
+                          className="rounded-md border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 p-2"
+                          placeholder="Select Time"
+                        />
+                        <button
+                          type="button"
+                          onClick={addEventDate}
+                          disabled={!newEventDate || !newEventTime}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <FiPlus size={16} />
+                          Add
+                        </button>
+                      </div>
+                      <p className="text-sm text-gray-500">
+                        Add all available dates and times for this event
+                      </p>
+                      {errors.event_dates && <p className="text-sm text-red-600">{errors.event_dates}</p>}
+                      
+                      {newProduct.event_dates.length > 0 && (
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-gray-700">Selected Dates & Times:</h4>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            {newProduct.event_dates.map((eventDateTime, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-lg px-3 py-2"
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-sm font-medium text-blue-800">
+                                    {new Date(eventDateTime.date).toLocaleDateString('en-US', {
+                                      weekday: 'short',
+                                      year: 'numeric',
+                                      month: 'short',
+                                      day: 'numeric'
+                                    })}
+                                  </span>
+                                  <span className="text-xs text-blue-600">
+                                    {new Date(`2000-01-01T${eventDateTime.time}`).toLocaleTimeString('en-US', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      hour12: true
+                                    })}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => removeEventDate(eventDateTime)}
+                                  className="text-red-500 hover:text-red-700 ml-2"
+                                >
+                                  <FiX size={14} />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* Product Image - Only show for non-events */}
                   {!newProduct.is_event && (

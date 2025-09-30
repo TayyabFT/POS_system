@@ -203,13 +203,14 @@ export default function EventsPage() {
       selected_items: cartItems.map(item => ({
         id: item.id,
         date: item.selectedDate || formatDateForAPI(new Date()),
-        number_of_person: item.quantity,
+        number_of_persons: item.quantity,
         product_name: item.product_name,
-        price: item.price
+        price: item.price,
+        total_cost: item.price * item.quantity
       })),
-      subtotal: subtotal,
-      tax: tax,
-      total_amount: total
+      subtotal: cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0),
+      tax: cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0) * 0.12,
+      total_amount: cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0) * 1.12
     };
 
     const response = await fetch(`${API_BASE_URL}/addorder/${userId}`, {
@@ -248,6 +249,7 @@ export default function EventsPage() {
     setIsCustomerModalOpen(false);
     setIsCreateModalOpen(false);
   };
+
 
   return (
     <div className="flex h-screen bg-white font-sans text-gray-900">
@@ -573,53 +575,97 @@ export default function EventsPage() {
               <div className="mb-6">
                 <h4 className="font-medium mb-3">Event Availability</h4>
 
-                <div className="flex justify-center gap-2 mb-6">
-                  {[
-                    {
-                      day: "Sun",
-                      date: "25",
-                      short: "SU",
-                      fullDate: "25-05-2025",
-                    },
-                    {
-                      day: "Mon",
-                      date: "26",
-                      short: "MO",
-                      fullDate: "26-05-2025",
-                    },
-                    {
-                      day: "Tue",
-                      date: "27",
-                      short: "TU",
-                      fullDate: "27-05-2025",
-                    },
-                    {
-                      day: "Wed",
-                      date: "28",
-                      short: "WE",
-                      fullDate: "28-05-2025",
-                    },
-                    {
-                      day: "Thu",
-                      date: "29",
-                      short: "TH",
-                      fullDate: "29-05-2025",
-                    },
-                  ].map((item, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedDate(item.fullDate)}
-                      className={`flex flex-col items-center p-2 rounded-lg border transition ${
-                        selectedDate === item.fullDate
-                          ? "bg-blue-600 text-white border-blue-600"
-                          : "border-gray-300 hover:border-blue-600"
-                      }`}
-                    >
-                      <span className="text-xs">{item.short}</span>
-                      <span className="font-medium">{item.date}</span>
-                      <span className="text-xs">May</span>
-                    </button>
-                  ))}
+                <div className="flex justify-center gap-2 mb-6 overflow-x-auto">
+                  {(() => {
+                    // Parse event_dates if available, otherwise show default dates
+                    let availableDates = [];
+                    
+                    if (selectedEvent.event_dates) {
+                      try {
+                        const parsedDates = typeof selectedEvent.event_dates === 'string' 
+                          ? JSON.parse(selectedEvent.event_dates) 
+                          : selectedEvent.event_dates;
+                        availableDates = parsedDates.map(eventDateTime => {
+                          const dateObj = new Date(eventDateTime.date);
+                          return {
+                            day: dateObj.toLocaleDateString('en-US', { weekday: 'short' }),
+                            date: dateObj.getDate().toString(),
+                            short: dateObj.toLocaleDateString('en-US', { weekday: 'short' }).slice(0, 2).toUpperCase(),
+                            fullDate: eventDateTime.datetime || eventDateTime.date,
+                            month: dateObj.toLocaleDateString('en-US', { month: 'short' }),
+                            time: eventDateTime.time,
+                            displayTime: eventDateTime.time ? new Date(`2000-01-01T${eventDateTime.time}`).toLocaleTimeString('en-US', {
+                              hour: '2-digit',
+                              minute: '2-digit',
+                              hour12: true
+                            }) : null
+                          };
+                        });
+                      } catch (error) {
+                        console.error('Error parsing event dates:', error);
+                      }
+                    }
+                    
+                    // Fallback to default dates if no event_dates available
+                    if (availableDates.length === 0) {
+                      availableDates = [
+                        {
+                          day: "Sun",
+                          date: "25",
+                          short: "SU",
+                          fullDate: "25-05-2025",
+                          month: "May"
+                        },
+                        {
+                          day: "Mon",
+                          date: "26",
+                          short: "MO",
+                          fullDate: "26-05-2025",
+                          month: "May"
+                        },
+                        {
+                          day: "Tue",
+                          date: "27",
+                          short: "TU",
+                          fullDate: "27-05-2025",
+                          month: "May"
+                        },
+                        {
+                          day: "Wed",
+                          date: "28",
+                          short: "WE",
+                          fullDate: "28-05-2025",
+                          month: "May"
+                        },
+                        {
+                          day: "Thu",
+                          date: "29",
+                          short: "TH",
+                          fullDate: "29-05-2025",
+                          month: "May"
+                        },
+                      ];
+                    }
+                    
+                    return availableDates.map((item, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedDate(item.fullDate)}
+                        className={`flex flex-col items-center p-2 rounded-lg border transition min-w-[80px] ${
+                          selectedDate === item.fullDate
+                            ? "bg-blue-600 text-white border-blue-600"
+                            : "border-gray-300 hover:border-blue-600"
+                        }`}
+                      >
+                        <span className="text-xs">{item.short}</span>
+                        <span className="font-medium">{item.date}</span>
+                        <span className="text-xs">{item.month}</span>
+                        {item.displayTime && (
+                          <span className="text-xs mt-1 font-medium">{item.displayTime}</span>
+                        )}
+                      </button>
+                    ));
+                  })()}
                 </div>
 
                 <div className="flex items-center justify-between mb-6">
@@ -678,6 +724,7 @@ export default function EventsPage() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

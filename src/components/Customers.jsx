@@ -35,7 +35,7 @@ import {
 } from "recharts";
 import Sidebar from "./Sidebar";
 import Navbar from "./navbar";
-import API_BASE_URL from "@/apiconfig/API_BASE_URL";
+import { getTopCustomers, getCustomerStats, getAllCustomers, deleteCustomer as deleteCustomerService, updateCustomer as updateCustomerService } from "@/services/customerService";
 
 const CustomersPage = () => {
   const [activeTab, setActiveTab] = useState("all");
@@ -48,6 +48,7 @@ const CustomersPage = () => {
   });
   const [customers, setCustomers] = useState([]);
   const [topCustomers, setTopCustomers] = useState([]);
+  const [topCustomersLoading, setTopCustomersLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [editFormData, setEditFormData] = useState({
@@ -66,23 +67,17 @@ const CustomersPage = () => {
   const fetchCustomerStats = async () => {
     try {
       const userId = localStorage.getItem("userid");
-      setLoading(true);
-      const response = await fetch(`${API_BASE_URL}/customerstats/${userId}`);
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      if (!userId) {
+        throw new Error("User ID not found");
       }
       
-      const data = await response.json();
+      setLoading(true);
+      const result = await getCustomerStats(userId);
       
-      if (data.success) {
-        setCustomerStats({
-          total_customers: parseInt(data.data.total_customers) || 0,
-          new_customers_current_month: parseInt(data.data.new_customers_current_month) || 0,
-          average_spending: parseFloat(data.data.average_spending) || 0
-        });
+      if (result.success) {
+        setCustomerStats(result.data);
       } else {
-        throw new Error(data.message || 'Failed to fetch customer statistics');
+        throw new Error('Failed to fetch customer statistics');
       }
     } catch (err) {
       setError(err.message);
@@ -102,18 +97,12 @@ const CustomersPage = () => {
         throw new Error("User ID not found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/getcustomers/${userId}`);
+      const result = await getAllCustomers(userId);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setCustomers(data.data || []);
+      if (result.success) {
+        setCustomers(result.data);
       } else {
-        throw new Error(data.message || 'Failed to fetch customers');
+        throw new Error('Failed to fetch customers');
       }
     } catch (err) {
       console.error("Error fetching customers:", err);
@@ -135,26 +124,25 @@ const CustomersPage = () => {
         throw new Error("User ID not found");
       }
 
-      const response = await fetch(`${API_BASE_URL}/gettopcustomer/${userId}`);
+      setTopCustomersLoading(true);
+      const result = await getTopCustomers(userId);
       
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        setTopCustomers(data.data || []);
+      if (result.success) {
+        setTopCustomers(result.data);
+        console.log("Top customers fetched successfully:", result.data);
       } else {
-        throw new Error(data.message || 'Failed to fetch top customers');
+        throw new Error(result.message || 'Failed to fetch top customers');
       }
     } catch (err) {
       console.error("Error fetching top customers:", err);
+      // Fallback data for development/testing
       setTopCustomers([
         { id: 1, full_name: "John Doe", email: "john.doe@example.com", total_spent: "250.50" },
         { id: 2, full_name: "Sarah Smith", email: "sarah.smith@example.com", total_spent: "1890.25" },
         { id: 3, full_name: "Michael Johnson", email: "michael.j@example.com", total_spent: "2450.75" }
       ]);
+    } finally {
+      setTopCustomersLoading(false);
     }
   };
 
@@ -164,23 +152,15 @@ const CustomersPage = () => {
     }
 
     try {
-      const response = await fetch(`${API_BASE_URL}/deletecustomer/${customerId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const result = await deleteCustomerService(customerId);
       
-      if (data.success) {
+      if (result.success) {
         setCustomers(customers.filter(customer => customer.id !== customerId));
         setTopCustomers(topCustomers.filter(customer => customer.id !== customerId));
         alert('Customer deleted successfully!');
         fetchCustomerStats();
       } else {
-        throw new Error(data.message || 'Failed to delete customer');
+        throw new Error(result.message || 'Failed to delete customer');
       }
     } catch (err) {
       console.error("Error deleting customer:", err);
@@ -220,21 +200,9 @@ const CustomersPage = () => {
     if (!editingCustomer) return;
 
     try {
-      const response = await fetch(`${API_BASE_URL}/editcustomer/${editingCustomer.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(editFormData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const data = await response.json();
+      const result = await updateCustomerService(editingCustomer.id, editFormData);
       
-      if (data.success) {
+      if (result.success) {
         setCustomers(customers.map(customer => 
           customer.id === editingCustomer.id 
             ? { ...customer, ...editFormData }
@@ -248,7 +216,7 @@ const CustomersPage = () => {
         closeEditModal();
         alert('Customer updated successfully!');
       } else {
-        throw new Error(data.message || 'Failed to update customer');
+        throw new Error(result.message || 'Failed to update customer');
       }
     } catch (err) {
       console.error("Error updating customer:", err);
@@ -431,7 +399,12 @@ const CustomersPage = () => {
               </div>
             </div>
             <div className="p-6">
-              {topCustomers.length > 0 ? (
+              {topCustomersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
+                  <span className="ml-2 text-gray-600">Loading top customers...</span>
+                </div>
+              ) : topCustomers.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {topCustomers.map((customer, index) => (
                     <div key={customer.id} className="border rounded-lg p-4 hover:shadow-md transition">
@@ -443,16 +416,19 @@ const CustomersPage = () => {
                           <div>
                             <div className="font-medium">{customer.full_name}</div>
                             <div className="text-sm text-gray-500">{customer.email}</div>
+                            {customer.social && (
+                              <div className="text-xs text-gray-400">{customer.social}</div>
+                            )}
                           </div>
                         </div>
                         <div className="flex items-center gap-1 text-yellow-500">
                           <FiStar className="w-4 h-4 fill-current" />
-                          <span className="text-sm font-medium">{index + 1}</span>
+                          <span className="text-sm font-medium">#{index + 1}</span>
                         </div>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="text-sm text-gray-600">Total Spent</span>
-                        <span className="font-bold text-green-600">${parseFloat(customer.total_spent).toFixed(2)}</span>
+                        <span className="text-sm text-gray-600">Total Spent This Week</span>
+                        <span className="font-bold text-green-600">${parseFloat(customer.total_spent || 0).toFixed(2)}</span>
                       </div>
                     </div>
                   ))}
@@ -460,7 +436,8 @@ const CustomersPage = () => {
               ) : (
                 <div className="text-center text-gray-500 py-8">
                   <FiAward className="w-12 h-12 mx-auto mb-2 opacity-70" />
-                  <p>No top customers data available</p>
+                  <p>No top customers data available for this week</p>
+                  <p className="text-sm mt-1">Try refreshing or check back later</p>
                 </div>
               )}
             </div>
