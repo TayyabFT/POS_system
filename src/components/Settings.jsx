@@ -3,26 +3,11 @@
 import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
 import API_BASE_URL from "@/apiconfig/API_BASE_URL";
+import Navbar from "./navbar";
+import Sidebar from "./Sidebar";
 
 import {
-  FiPieChart,
-  FiDollarSign,
-  FiUsers,
-  FiShoppingCart,
-  FiSettings,
-  FiPackage,
-  FiShoppingBag,
-  FiClipboard,
-  FiBarChart2,
-  FiLogOut,
-  FiMenu,
-  FiX,
-  FiBell,
-  FiUser,
-  FiSearch,
-  FiChevronDown,
   FiSave,
-  FiEdit,
   FiGlobe,
   FiCreditCard,
   FiLock,
@@ -33,7 +18,6 @@ import {
 } from "react-icons/fi";
 
 const SettingsPage = () => {
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const router = useRouter();
   
@@ -50,9 +34,39 @@ const SettingsPage = () => {
   const [loading, setLoading] = useState(false);
   const [saveMessage, setSaveMessage] = useState("");
 
+  // Business profile settings state
+  const [businessProfile, setBusinessProfile] = useState({
+    business_name: "Flow POS Store",
+    business_type: "Retail",
+    tax_id: "123-45-6789",
+    contact_email: "contact@flowpos.com",
+    contact_phone: "+1 (555) 123-4567",
+    address: "123 Main St, Anytown, USA",
+    logo_url: null
+  });
+  const [businessProfileId, setBusinessProfileId] = useState(null);
+  const [businessSaving, setBusinessSaving] = useState(false);
+  const [businessLoading, setBusinessLoading] = useState(false);
+  const [businessSaveMessage, setBusinessSaveMessage] = useState("");
+  const [selectedLogo, setSelectedLogo] = useState(null);
+  const [logoPreview, setLogoPreview] = useState(null);
+
+  // Payment methods settings state
+  const [paymentMethods, setPaymentMethods] = useState({
+    credit_card_active: true,
+    cash_active: true,
+    online_payment_active: false
+  });
+  const [paymentMethodsId, setPaymentMethodsId] = useState(null);
+  const [paymentMethodsSaving, setPaymentMethodsSaving] = useState(false);
+  const [paymentMethodsLoading, setPaymentMethodsLoading] = useState(false);
+  const [paymentMethodsSaveMessage, setPaymentMethodsSaveMessage] = useState("");
+
   // Fetch general settings on component mount
   useEffect(() => {
     fetchGeneralSettings();
+    fetchBusinessProfileSettings();
+    fetchPaymentMethodsSettings();
   }, []);
 
   const fetchGeneralSettings = async () => {
@@ -133,121 +147,236 @@ const SettingsPage = () => {
     }
   };
 
+  const fetchBusinessProfileSettings = async () => {
+    try {
+      setBusinessLoading(true);
+      
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        console.log("User ID not found. Using default business settings.");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/getbusinessprofilesetting/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.message) {
+        // data.message contains the business profile object
+        setBusinessProfile({
+          business_name: data.message.business_name || "Flow POS Store",
+          business_type: data.message.business_type || "Retail",
+          tax_id: data.message.tax_id || "",
+          contact_email: data.message.contact_email || "",
+          contact_phone: data.message.contact_phone || "",
+          address: data.message.address || "",
+          logo_url: data.message.logo_url
+        });
+        // Store the business profile ID from the response
+        setBusinessProfileId(data.message.id);
+        // Set logo preview if logo_url exists
+        if (data.message.logo_url) {
+          setLogoPreview(data.message.logo_url);
+        }
+      }
+    } catch (err) {
+      console.error("Error fetching business profile settings:", err);
+      // Keep default values if fetch fails
+    } finally {
+      setBusinessLoading(false);
+    }
+  };
+
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedLogo(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveBusinessProfile = async () => {
+    try {
+      setBusinessSaving(true);
+      setBusinessSaveMessage("");
+      
+      // Check if businessProfileId exists
+      if (!businessProfileId) {
+        throw new Error("Business profile ID not found. Please refresh the page.");
+      }
+
+      // Create form data for file upload
+      const formData = new FormData();
+      formData.append("business_name", businessProfile.business_name);
+      formData.append("business_type", businessProfile.business_type);
+      formData.append("tax_id", businessProfile.tax_id);
+      formData.append("contact_email", businessProfile.contact_email);
+      formData.append("contact_phone", businessProfile.contact_phone);
+      formData.append("address", businessProfile.address);
+      
+      // Append logo file if selected
+      if (selectedLogo) {
+        formData.append("image", selectedLogo);
+      }
+
+      const response = await fetch(`${API_BASE_URL}/updatebusinessprofilesetting/${businessProfileId}`, {
+        method: 'PUT',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setBusinessSaveMessage("Business profile saved successfully!");
+        setTimeout(() => setBusinessSaveMessage(""), 3000);
+        setSelectedLogo(null); // Clear selected file after successful save
+      } else {
+        throw new Error(data.error || 'Failed to save business profile');
+      }
+    } catch (err) {
+      console.error("Error saving business profile:", err);
+      setBusinessSaveMessage(err.message || "Failed to save business profile");
+    } finally {
+      setBusinessSaving(false);
+    }
+  };
+
+  const fetchPaymentMethodsSettings = async () => {
+    try {
+      setPaymentMethodsLoading(true);
+      
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        console.log("User ID not found. Using default payment methods settings.");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/getpaymentmethodssetting/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.message) {
+        // data.message contains the payment methods object with id
+        setPaymentMethods({
+          credit_card_active: data.message.credit_card_active ?? true,
+          cash_active: data.message.cash_active ?? true,
+          online_payment_active: data.message.online_payment_active ?? false
+        });
+        // Store the payment methods ID from the response
+        setPaymentMethodsId(data.message.id);
+      }
+    } catch (err) {
+      console.error("Error fetching payment methods settings:", err);
+      // Keep default values if fetch fails
+    } finally {
+      setPaymentMethodsLoading(false);
+    }
+  };
+
+  const handleSavePaymentMethods = async () => {
+    try {
+      setPaymentMethodsSaving(true);
+      setPaymentMethodsSaveMessage("");
+      
+      // Check if paymentMethodsId exists (from GET API response)
+      if (!paymentMethodsId) {
+        throw new Error("Payment methods settings ID not found. Please refresh the page.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/updatepaymentmethodssetting/${paymentMethodsId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          credit_card_active: paymentMethods.credit_card_active,
+          cash_active: paymentMethods.cash_active,
+          online_payment_active: paymentMethods.online_payment_active
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setPaymentMethodsSaveMessage("Payment methods saved successfully!");
+        setTimeout(() => setPaymentMethodsSaveMessage(""), 3000);
+        // Update the ID if it's returned in the response
+        if (data.message?.id) {
+          setPaymentMethodsId(data.message.id);
+        } else if (data.id) {
+          setPaymentMethodsId(data.id);
+        }
+      } else {
+        throw new Error(data.error || 'Failed to save payment methods');
+      }
+    } catch (err) {
+      console.error("Error saving payment methods:", err);
+      setPaymentMethodsSaveMessage(err.message || "Failed to save payment methods");
+    } finally {
+      setPaymentMethodsSaving(false);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      {/* Mobile Menu Button */}
-      <button 
-        onClick={() => setIsMobileMenuOpen(true)}
-        className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-blue-600 text-white"
-      >
-        <FiMenu className="w-6 h-6" />
-      </button>
-
-      {/* Sidebar */}
-      <aside className={`fixed md:relative z-40 w-64 bg-white text-gray-800 h-full transition-all duration-300 ${isMobileMenuOpen ? 'left-0' : '-left-64 md:left-0'} shadow-lg`}>
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <div className="text-2xl font-bold flex items-center text-blue-600">
-            <FiShoppingCart className="mr-2" /> Flow POS
-          </div>
-          <button 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="md:hidden text-gray-500 hover:text-gray-700"
-          >
-            <FiX className="w-6 h-6" />
-          </button>
-        </div>
-        
-        <nav className="p-4 space-y-1">
-          <div onClick={() => router.push('/dashboard')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
-            <FiPieChart className="w-5 h-5" /> <span>Dashboard</span>
-          </div>
-          <div onClick={() => router.push('/products')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
-            <FiPackage className="w-5 h-5" /> <span>Products</span>
-          </div>
-          <div onClick={() => router.push('/sales')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
-            <FiShoppingBag className="w-5 h-5" /> <span>Sales</span>
-          </div>
-          <div onClick={() => router.push('/invoice')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
-            <FiClipboard className="w-5 h-5" /> <span>Invoices</span>
-          </div>
-          <div onClick={() => router.push('/reports')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
-            <FiBarChart2 className="w-5 h-5" /> <span>Reports</span>
-          </div>
-          <div onClick={() => router.push('/customers')} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-blue-100 hover:text-blue-600 cursor-pointer transition-colors">
-            <FiUsers className="w-5 h-5" /> <span>Customers</span>
-          </div>
-          <div className="flex items-center space-x-3 p-3 rounded-lg bg-blue-100 text-blue-600 font-semibold">
-            <FiSettings className="w-5 h-5" /> <span>Settings</span>
-          </div>
-          <div className="border-t border-gray-200 pt-2 mt-2">
-            <div className="flex items-center space-x-3 p-3 rounded-lg hover:bg-red-100 text-red-500 hover:text-red-700 cursor-pointer transition-colors">
-              <FiLogOut className="w-5 h-5" /> <span>Logout</span>
+    <div className="flex h-screen bg-white font-sans text-gray-900">
+      <Sidebar tabname="settings" />
+      <main className="flex-1 flex flex-col overflow-hidden">
+        <Navbar />
+        <div className="flex-1 overflow-y-auto p-8 bg-gray-50">
+          {/* Settings Navigation */}
+          <div className="mb-8">
+            <div className="flex flex-wrap gap-3 bg-white p-2 rounded-lg shadow-sm inline-block">
+              <button 
+                onClick={() => setActiveTab("general")}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "general" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+              >
+                General
+              </button>
+              <button 
+                onClick={() => setActiveTab("business")}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "business" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+              >
+                Business Profile
+              </button>
+              <button 
+                onClick={() => setActiveTab("payment")}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "payment" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+              >
+                Payment Methods
+              </button>
+              <button 
+                onClick={() => setActiveTab("users")}
+                className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "users" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
+              >
+                Users & Permissions
+              </button>
             </div>
           </div>
-        </nav>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-4 md:p-8 overflow-hidden">
-        {/* Header */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Settings</h1>
-            <p className="text-gray-600">Manage your business settings and preferences.</p>
-          </div>
-          
-          <div className="flex items-center space-x-4 w-full md:w-auto">
-            <div className="relative flex-1 md:w-64">
-              <FiSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input 
-                type="text" 
-                placeholder="Search settings..." 
-                className="pl-10 pr-4 py-2 w-full rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <button className="p-2 rounded-full bg-white shadow-sm hover:bg-gray-100 relative">
-              <FiBell className="w-5 h-5 text-gray-600" />
-              <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full"></span>
-            </button>
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white">
-                <FiUser className="w-4 h-4" />
-              </div>
-              <span className="hidden md:inline text-gray-700">Admin</span>
-              <FiChevronDown className="hidden md:inline text-gray-500" />
-            </div>
-          </div>
-        </header>
-
-        {/* Settings Navigation */}
-        <div className="mb-8">
-          <div className="flex flex-wrap gap-3 bg-white p-2 rounded-lg shadow-sm inline-block">
-            <button 
-              onClick={() => setActiveTab("general")}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "general" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
-            >
-              General
-            </button>
-            <button 
-              onClick={() => setActiveTab("business")}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "business" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
-            >
-              Business Profile
-            </button>
-            <button 
-              onClick={() => setActiveTab("payment")}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "payment" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
-            >
-              Payment Methods
-            </button>
-            <button 
-              onClick={() => setActiveTab("users")}
-              className={`px-4 py-2 rounded-md text-sm font-medium ${activeTab === "users" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
-            >
-              Users & Permissions
-            </button>
-          </div>
-        </div>
 
         {/* Settings Content */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
@@ -361,14 +490,35 @@ const SettingsPage = () => {
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-6">Business Profile</h2>
               
+              {businessLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Loading business profile...</span>
+                </div>
+              ) : (
               <div className="space-y-6">
                 <div className="flex items-center space-x-4">
-                  <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center">
-                    <FiShoppingCart className="w-12 h-12 text-gray-400" />
+                  <div className="w-24 h-24 bg-gray-200 rounded-lg flex items-center justify-center overflow-hidden">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Business Logo" className="w-full h-full object-cover" />
+                    ) : (
+                      <FiShoppingCart className="w-12 h-12 text-gray-400" />
+                    )}
                   </div>
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm">
-                    Upload Logo
-                  </button>
+                  <div>
+                    <label className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm cursor-pointer inline-block">
+                      <input 
+                        type="file" 
+                        accept="image/*" 
+                        onChange={handleLogoChange}
+                        className="hidden"
+                      />
+                      Upload Logo
+                    </label>
+                    {selectedLogo && (
+                      <p className="text-xs text-gray-500 mt-1">{selectedLogo.name}</p>
+                    )}
+                  </div>
                 </div>
                 
                 <div>
@@ -378,7 +528,8 @@ const SettingsPage = () => {
                   <input 
                     type="text" 
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    defaultValue="Flow POS Store"
+                    value={businessProfile.business_name}
+                    onChange={(e) => setBusinessProfile({...businessProfile, business_name: e.target.value})}
                   />
                 </div>
                 
@@ -386,12 +537,16 @@ const SettingsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Business Type
                   </label>
-                  <select className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-                    <option>Retail</option>
-                    <option>Restaurant</option>
-                    <option>Service</option>
-                    <option>E-commerce</option>
-                    <option>Other</option>
+                  <select 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={businessProfile.business_type}
+                    onChange={(e) => setBusinessProfile({...businessProfile, business_type: e.target.value})}
+                  >
+                    <option value="Retail">Retail</option>
+                    <option value="Restaurant">Restaurant</option>
+                    <option value="Service">Service</option>
+                    <option value="E-commerce">E-commerce</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
                 
@@ -402,7 +557,8 @@ const SettingsPage = () => {
                   <input 
                     type="text" 
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    defaultValue="123-45-6789"
+                    value={businessProfile.tax_id}
+                    onChange={(e) => setBusinessProfile({...businessProfile, tax_id: e.target.value})}
                   />
                 </div>
                 
@@ -416,7 +572,8 @@ const SettingsPage = () => {
                       <input 
                         type="email" 
                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        defaultValue="contact@flowpos.com"
+                        value={businessProfile.contact_email}
+                        onChange={(e) => setBusinessProfile({...businessProfile, contact_email: e.target.value})}
                       />
                     </div>
                     <div className="flex items-center">
@@ -424,7 +581,8 @@ const SettingsPage = () => {
                       <input 
                         type="tel" 
                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                        defaultValue="+1 (555) 123-4567"
+                        value={businessProfile.contact_phone}
+                        onChange={(e) => setBusinessProfile({...businessProfile, contact_phone: e.target.value})}
                       />
                     </div>
                     <div className="flex items-center">
@@ -432,18 +590,30 @@ const SettingsPage = () => {
                       <textarea 
                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         rows={3}
-                        defaultValue="123 Business Street, Suite 101&#10;San Francisco, CA 94107&#10;United States"
+                        value={businessProfile.address}
+                        onChange={(e) => setBusinessProfile({...businessProfile, address: e.target.value})}
                       />
                     </div>
                   </div>
                 </div>
                 
+                {businessSaveMessage && (
+                  <div className={`p-3 rounded-md ${businessSaveMessage.includes('successfully') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {businessSaveMessage}
+                  </div>
+                )}
+                
                 <div className="pt-4 border-t border-gray-200">
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
-                    <FiSave className="mr-2" /> Save Profile
+                  <button 
+                    onClick={handleSaveBusinessProfile}
+                    disabled={businessSaving}
+                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 rounded-md flex items-center"
+                  >
+                    <FiSave className="mr-2" /> {businessSaving ? 'Saving...' : 'Save Profile'}
                   </button>
                 </div>
               </div>
+              )}
             </div>
           )}
           
@@ -451,6 +621,12 @@ const SettingsPage = () => {
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-6">Payment Methods</h2>
               
+              {paymentMethodsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Loading payment methods...</span>
+                </div>
+              ) : (
               <div className="space-y-6">
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <div className="flex items-center justify-between">
@@ -462,16 +638,23 @@ const SettingsPage = () => {
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mr-3">Active</span>
+                      <span className={`${paymentMethods.credit_card_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs px-2 py-1 rounded-full mr-3`}>
+                        {paymentMethods.credit_card_active ? 'Active' : 'Inactive'}
+                      </span>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          checked={paymentMethods.credit_card_active}
+                          onChange={(e) => setPaymentMethods({...paymentMethods, credit_card_active: e.target.checked})}
+                          className="sr-only peer" 
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
                   </div>
                   <div className="mt-4 pl-9">
                     <button className="text-blue-500 text-sm hover:underline flex items-center">
-                      <FiEdit className="mr-1" /> Configure
+                      Configure
                     </button>
                   </div>
                 </div>
@@ -479,16 +662,22 @@ const SettingsPage = () => {
                 <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center">
-                      <FiDollarSign className="text-blue-500 mr-3 w-6 h-6" />
                       <div>
                         <h3 className="font-medium">Cash</h3>
                         <p className="text-sm text-gray-500">Accept cash payments</p>
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full mr-3">Active</span>
+                      <span className={`${paymentMethods.cash_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs px-2 py-1 rounded-full mr-3`}>
+                        {paymentMethods.cash_active ? 'Active' : 'Inactive'}
+                      </span>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          checked={paymentMethods.cash_active}
+                          onChange={(e) => setPaymentMethods({...paymentMethods, cash_active: e.target.checked})}
+                          className="sr-only peer" 
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
@@ -505,26 +694,44 @@ const SettingsPage = () => {
                       </div>
                     </div>
                     <div className="flex items-center">
-                      <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded-full mr-3">Inactive</span>
+                      <span className={`${paymentMethods.online_payment_active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'} text-xs px-2 py-1 rounded-full mr-3`}>
+                        {paymentMethods.online_payment_active ? 'Active' : 'Inactive'}
+                      </span>
                       <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" className="sr-only peer" />
+                        <input 
+                          type="checkbox" 
+                          checked={paymentMethods.online_payment_active}
+                          onChange={(e) => setPaymentMethods({...paymentMethods, online_payment_active: e.target.checked})}
+                          className="sr-only peer" 
+                        />
                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                       </label>
                     </div>
                   </div>
                   <div className="mt-4 pl-9">
                     <button className="text-blue-500 text-sm hover:underline flex items-center">
-                      <FiEdit className="mr-1" /> Configure
+                      Configure
                     </button>
                   </div>
                 </div>
                 
+                {paymentMethodsSaveMessage && (
+                  <div className={`p-3 rounded-md ${paymentMethodsSaveMessage.includes('successfully') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {paymentMethodsSaveMessage}
+                  </div>
+                )}
+                
                 <div className="pt-4 border-t border-gray-200">
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
-                    <FiSave className="mr-2" /> Save Payment Settings
+                  <button 
+                    onClick={handleSavePaymentMethods}
+                    disabled={paymentMethodsSaving}
+                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 rounded-md flex items-center"
+                  >
+                    <FiSave className="mr-2" /> {paymentMethodsSaving ? 'Saving...' : 'Save Payment Settings'}
                   </button>
                 </div>
               </div>
+              )}
             </div>
           )}
           
@@ -643,6 +850,7 @@ const SettingsPage = () => {
               </div>
             </div>
           )}
+        </div>
         </div>
       </main>
     </div>

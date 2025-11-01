@@ -9,7 +9,8 @@ import {
   FiArrowRight,
   FiCheck,
   FiPhone,
-  FiShoppingCart
+  FiShoppingCart,
+  FiLoader
 } from 'react-icons/fi';
 import { FcGoogle } from 'react-icons/fc';
 import { motion } from 'framer-motion';
@@ -21,7 +22,7 @@ const AuthForms = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showconfirm_password, setShowconfirm_password] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
+    full_name: '',
     email: '',
     phone_number: '',
     password: '',
@@ -38,6 +39,16 @@ const router = useRouter();
 
   const toggleForm = () => {
     setIsLogin(!isLogin);
+    setError(null); // Clear error when switching forms
+    setFormData({
+      full_name: '',
+      email: '',
+      phone_number: '',
+      password: '',
+      confirm_password: '',
+      remember: false,
+      terms: false
+    });
   };
 
   const handleChange = (e) => {
@@ -46,6 +57,10 @@ const router = useRouter();
       ...prev,
       [name]: type === 'checkbox' ? checked : value
     }));
+    // Clear error when user starts typing
+    if (error) {
+      setError(null);
+    }
   };
 
    const handleSubmit = async (e) => {
@@ -55,30 +70,77 @@ const router = useRouter();
 
     try {
       if (isLogin) {
+        // Validate login form
+        if (!formData.email || !formData.password) {
+          throw new Error('Please fill in all required fields');
+        }
+
         // Handle login
-        const { email, password} = formData;
+        const { email, password } = formData;
         const response = await loginUser({ email, password });
         
+        // Check if response is successful
+        if (!response || !response.message) {
+          throw new Error('Invalid response from server');
+        }
+        
         // Store token or user data as needed
-        localStorage.setItem('userid', response.message.user_id);
+        if (response.message.user_id) {
+          localStorage.setItem('userid', response.message.user_id);
+        }
         
         // Navigate to dashboard
         router.push('/pos');
       } else {
-        // Handle signup
+        // Validate signup form
+        if (!formData.full_name || !formData.email || !formData.password || !formData.confirm_password) {
+          throw new Error('Please fill in all required fields');
+        }
+
+        if (formData.password.length < 6) {
+          throw new Error('Password must be at least 6 characters long');
+        }
+
         if (formData.password !== formData.confirm_password) {
           throw new Error('Passwords do not match');
+        }
+
+        if (!formData.terms) {
+          throw new Error('Please agree to the terms and conditions');
         }
 
         const { full_name, email, phone_number, password, confirm_password } = formData;
         const response = await signUpUser({ full_name, email, phone_number, password, confirm_password });
 
+        // Check if response is successful
+        if (!response) {
+          throw new Error('Invalid response from server');
+        }
+
         // Optionally auto-login after signup
-        localStorage.setItem('authToken', response.token);
+        if (response.token) {
+          localStorage.setItem('authToken', response.token);
+        }
+        
+        if (response.message?.user_id) {
+          localStorage.setItem('userid', response.message.user_id);
+        }
+        
         router.push('/setupbusiness');
       }
     } catch (err) {
-      setError(err.message || 'An error occurred. Please try again.');
+      // Handle different types of errors
+      let errorMessage = 'An error occurred. Please try again.';
+      
+      if (err.message) {
+        errorMessage = err.message;
+      } else if (err.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (typeof err === 'string') {
+        errorMessage = err;
+      }
+      
+      setError(errorMessage);
       console.error('Authentication error:', err);
     } finally {
       setIsLoading(false);
@@ -304,15 +366,45 @@ const router = useRouter();
                 </motion.div>
               )}
 
+              {/* Error Message */}
+              {error && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm"
+                >
+                  <div className="flex items-start">
+                    <svg className="w-5 h-5 mr-2 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                    </svg>
+                    <span>{error}</span>
+                  </div>
+                </motion.div>
+              )}
+
               {/* Submit Button */}
               <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
+                whileHover={!isLoading ? { scale: 1.02 } : {}}
+                whileTap={!isLoading ? { scale: 0.98 } : {}}
                 type="submit"
-                className="w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl py-3 px-6 font-medium shadow-lg hover:shadow-xl transition-all"
+                disabled={isLoading}
+                className={`w-full flex items-center justify-center space-x-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl py-3 px-6 font-medium shadow-lg transition-all ${
+                  isLoading 
+                    ? 'opacity-70 cursor-not-allowed' 
+                    : 'hover:shadow-xl'
+                }`}
               >
-                <span>{isLogin ? 'Login' : 'Create Account'}</span>
-                <FiArrowRight />
+                {isLoading ? (
+                  <>
+                    <FiLoader className="animate-spin" />
+                    <span>{isLogin ? 'Logging in...' : 'Creating account...'}</span>
+                  </>
+                ) : (
+                  <>
+                    <span>{isLogin ? 'Login' : 'Create Account'}</span>
+                    <FiArrowRight />
+                  </>
+                )}
               </motion.button>
             </form>
 

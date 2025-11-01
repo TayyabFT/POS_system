@@ -10,14 +10,21 @@ export const loginUser = async (credentials) => {
       body: JSON.stringify(credentials),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Login failed');
+      const errorMessage = data.message || data.error || 'Login failed. Please check your credentials.';
+      throw new Error(errorMessage);
     }
 
-    return await response.json();
+    return data;
   } catch (error) {
     console.error('Login error:', error);
+    // Handle network errors
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Network error. Please check your internet connection.');
+    }
+    // Re-throw the error with the message
     throw error;
   }
 };
@@ -32,14 +39,21 @@ export const signUpUser = async (userData) => {
       body: JSON.stringify(userData),
     });
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || 'Signup failed');
+      const errorMessage = data.message || data.error || 'Signup failed. Please try again.';
+      throw new Error(errorMessage);
     }
 
-    return await response.json();
+    return data;
   } catch (error) {
     console.error('Signup error:', error);
+    // Handle network errors
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      throw new Error('Network error. Please check your internet connection.');
+    }
+    // Re-throw the error with the message
     throw error;
   }
 };
