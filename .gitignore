@@ -44,3 +44,4 @@ next-env.d.ts
 # stripe integration docs with secrets
 STRIPE_INTEGRATION.md
 STRIPE_KEYS_SETUP.md
+tatus
