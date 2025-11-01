@@ -301,6 +301,18 @@ const OrderSummary = ({
             className="flex-1 bg-black hover:bg-gray-800 text-white py-3 rounded-lg font-medium shadow transition disabled:opacity-50"
             disabled={orderItems.length === 0}
             onClick={() => {
+              // Pass order data to payment page via localStorage or URL params
+              const orderData = {
+                items: orderItems,
+                subtotal: subtotal,
+                tax: tax,
+                total: total,
+                orderType: orderType,
+                selectedCustomer: selectedCustomer,
+                discount: discount,
+                orderNote: orderNote,
+              };
+              localStorage.setItem("currentOrder", JSON.stringify(orderData));
               router.push("/payment");
             }}
           >

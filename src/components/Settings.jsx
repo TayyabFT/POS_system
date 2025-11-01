@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from 'next/navigation';
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
 import {
   FiPieChart,
@@ -27,13 +28,110 @@ import {
   FiLock,
   FiMail,
   FiPhone,
-  FiHome
+  FiHome,
+  FiPlus
 } from "react-icons/fi";
 
 const SettingsPage = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("general");
   const router = useRouter();
+  
+  // General settings state
+  const [generalSettings, setGeneralSettings] = useState({
+    store_name: "Flow POS Store",
+    currency: "USD",
+    time_zone: "UTC-5",
+    date_format: "MM/DD/YYYY",
+    show_prices_tax_inclusive: false
+  });
+  const [settingsId, setSettingsId] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+
+  // Fetch general settings on component mount
+  useEffect(() => {
+    fetchGeneralSettings();
+  }, []);
+
+  const fetchGeneralSettings = async () => {
+    try {
+      setLoading(true);
+      
+      // Get user ID from localStorage
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        console.log("User ID not found. Using default settings.");
+        return;
+      }
+
+      const response = await fetch(`${API_BASE_URL}/getgeneralsetting/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      if (data.success && data.message) {
+        // data.message contains the settings object
+        setGeneralSettings({
+          store_name: data.message.store_name || "Flow POS Store",
+          currency: data.message.currency || "USD",
+          time_zone: data.message.time_zone || "UTC-5",
+          date_format: data.message.date_format || "MM/DD/YYYY",
+          show_prices_tax_inclusive: data.message.show_prices_tax_inclusive || false
+        });
+        // Store the settings ID from the response
+        setSettingsId(data.message.id);
+      }
+    } catch (err) {
+      console.error("Error fetching general settings:", err);
+      // Keep default values if fetch fails
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveGeneralSettings = async () => {
+    try {
+      setSaving(true);
+      setSaveMessage("");
+      
+      // Check if settingsId exists
+      if (!settingsId) {
+        throw new Error("Settings ID not found. Please refresh the page.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/updategeneralsetting/${settingsId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(generalSettings),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      if (data.success) {
+        setSaveMessage("Settings saved successfully!");
+        setTimeout(() => setSaveMessage(""), 3000);
+      } else {
+        throw new Error(data.error || 'Failed to save settings');
+      }
+    } catch (err) {
+      console.error("Error saving settings:", err);
+      setSaveMessage(err.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -157,6 +255,12 @@ const SettingsPage = () => {
             <div className="p-6">
               <h2 className="text-xl font-semibold mb-6">General Settings</h2>
               
+              {loading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-gray-600">Loading settings...</span>
+                </div>
+              ) : (
               <div className="space-y-6">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -165,7 +269,8 @@ const SettingsPage = () => {
                   <input 
                     type="text" 
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    defaultValue="Flow POS Store"
+                    value={generalSettings.store_name}
+                    onChange={(e) => setGeneralSettings({...generalSettings, store_name: e.target.value})}
                   />
                 </div>
                 
@@ -173,7 +278,11 @@ const SettingsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Currency
                   </label>
-                  <select className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <select 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={generalSettings.currency}
+                    onChange={(e) => setGeneralSettings({...generalSettings, currency: e.target.value})}
+                  >
                     <option value="USD">USD - US Dollar</option>
                     <option value="EUR">EUR - Euro</option>
                     <option value="GBP">GBP - British Pound</option>
@@ -186,7 +295,11 @@ const SettingsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Time Zone
                   </label>
-                  <select className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <select 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={generalSettings.time_zone}
+                    onChange={(e) => setGeneralSettings({...generalSettings, time_zone: e.target.value})}
+                  >
                     <option value="UTC-8">Pacific Time (UTC-8)</option>
                     <option value="UTC-7">Mountain Time (UTC-7)</option>
                     <option value="UTC-6">Central Time (UTC-6)</option>
@@ -200,7 +313,11 @@ const SettingsPage = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Date Format
                   </label>
-                  <select className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                  <select 
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    value={generalSettings.date_format}
+                    onChange={(e) => setGeneralSettings({...generalSettings, date_format: e.target.value})}
+                  >
                     <option value="MM/DD/YYYY">MM/DD/YYYY</option>
                     <option value="DD/MM/YYYY">DD/MM/YYYY</option>
                     <option value="YYYY-MM-DD">YYYY-MM-DD</option>
@@ -212,18 +329,31 @@ const SettingsPage = () => {
                     id="tax-inclusive" 
                     type="checkbox" 
                     className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                    checked={generalSettings.show_prices_tax_inclusive}
+                    onChange={(e) => setGeneralSettings({...generalSettings, show_prices_tax_inclusive: e.target.checked})}
                   />
                   <label htmlFor="tax-inclusive" className="ml-2 block text-sm text-gray-700">
                     Show prices tax inclusive
                   </label>
                 </div>
                 
+                {saveMessage && (
+                  <div className={`p-3 rounded-md ${saveMessage.includes('successfully') ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {saveMessage}
+                  </div>
+                )}
+                
                 <div className="pt-4 border-t border-gray-200">
-                  <button className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md flex items-center">
-                    <FiSave className="mr-2" /> Save Changes
+                  <button 
+                    onClick={handleSaveGeneralSettings}
+                    disabled={saving}
+                    className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 rounded-md flex items-center"
+                  >
+                    <FiSave className="mr-2" /> {saving ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               </div>
+              )}
             </div>
           )}
           
