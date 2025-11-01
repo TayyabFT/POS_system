@@ -690,7 +690,7 @@ const SettingsPage = () => {
                       <FiGlobe className="text-blue-500 mr-3 w-6 h-6" />
                       <div>
                         <h3 className="font-medium">Online Payment</h3>
-                        <p className="text-sm text-gray-500">PayPal, Stripe, etc.</p>
+                        <p className="text-sm text-gray-500">PayPal, Online Payment Gateway, etc.</p>
                       </div>
                     </div>
                     <div className="flex items-center">

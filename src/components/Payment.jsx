@@ -25,7 +25,6 @@ import {
   FiCheck,
 } from "react-icons/fi";
 import { useRouter } from "next/navigation";
-import StripeElementsPayment from "./StripeElementsPayment";
 
 export default function PaymentPage() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -56,8 +55,6 @@ export default function PaymentPage() {
   const [lookupEmail, setLookupEmail] = useState("");
   const [lookupResults, setLookupResults] = useState([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [showStripeModal, setShowStripeModal] = useState(false);
-  const [stripeError, setStripeError] = useState("");
 
   // Add these functions
   const handleApplyGiftCard = () => {
@@ -273,12 +270,6 @@ export default function PaymentPage() {
       name: "Credit Card",
       icon: FiCreditCard,
       color: "bg-pink-500",
-    },
-    {
-      id: "Stripe",
-      name: "Stripe",
-      icon: FiCreditCard,
-      color: "bg-purple-500",
     },
     {
       id: "E-Wallet",
@@ -591,12 +582,6 @@ Thank you!`;
       receiptMethod: printReceipt ? receiptMethod : null,
     });
 
-    // Check if Stripe is selected as payment method
-    if (selectedPaymentMethods.includes("Stripe")) {
-      setShowStripeModal(true);
-      return;
-    }
-
     setShowLoyaltyModal(true);
   };
 
@@ -706,39 +691,6 @@ Thank you!`;
     });
   };
 
-  const handleStripeSuccess = (paymentIntent) => {
-    console.log("Stripe payment successful:", paymentIntent);
-    setShowStripeModal(false);
-    setStripeError("");
-    
-    // Process the successful payment
-    const finalAmount = Number.parseFloat(calculatorDisplay);
-    alert(`Stripe payment of $${finalAmount.toFixed(2)} processed successfully!`);
-    
-    // Handle receipt printing if enabled
-    if (printReceipt) {
-      if (receiptMethod === "Paper") {
-        setTimeout(() => {
-          handlePrintReceipt();
-        }, 1000);
-      }
-    }
-    
-    // Navigate back to POS after successful payment
-    setTimeout(() => {
-      router.push("/pos");
-    }, 2000);
-  };
-
-  const handleStripeError = (error) => {
-    console.error("Stripe payment error:", error);
-    setStripeError(error.message);
-  };
-
-  const handleStripeCancel = () => {
-    setShowStripeModal(false);
-    setStripeError("");
-  };
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -2126,17 +2078,6 @@ Thank you!`;
         </div>
       )}
 
-      {/* Stripe Payment Modal */}
-      {showStripeModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <StripeElementsPayment
-            amount={Number.parseFloat(calculatorDisplay)}
-            onSuccess={handleStripeSuccess}
-            onError={handleStripeError}
-            onCancel={handleStripeCancel}
-          />
-        </div>
-      )}
     </div>
   );
 }

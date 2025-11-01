@@ -187,7 +187,7 @@ const router = useRouter();
         <div className="container mx-auto px-6">
           <p className="text-center text-gray-500 mb-8">Trusted by businesses worldwide</p>
           <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            {['Stripe', 'Shopify', 'Square', 'QuickBooks', 'Uber Eats'].map((logo) => (
+            {['Shopify', 'Square', 'QuickBooks', 'Uber Eats'].map((logo) => (
               <div key={logo} className="text-2xl font-bold text-gray-400 hover:text-gray-600 transition duration-300">
                 {logo}
               </div>
