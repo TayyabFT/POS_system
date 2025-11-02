@@ -24,9 +24,9 @@ export default function AccountSettings() {
     email: "",
     phone_number: "",
     address: "",
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+    current_password: "",
+    new_password: "",
+    confirm_new_password: "",
     pin: "",
     facebook: "",
     instagram: "",
@@ -105,9 +105,9 @@ export default function AccountSettings() {
             email: userData.email || "",
             phone_number: userData.phone_number || "",
             address: userData.address === "Not Provided" ? "" : (userData.address || ""),
-            currentPassword: "",
-            newPassword: "",
-            confirmPassword: "",
+            current_password: "",
+            new_password: "",
+            confirm_new_password: "",
             pin: "",
             facebook: stripHttps(userData.facebook),
             instagram: stripHttps(userData.instagram),
@@ -161,31 +161,71 @@ export default function AccountSettings() {
     }
   };
 
+  const handlePasswordUpdate = async () => {
+    if (!formData.current_password || !formData.new_password || !formData.confirm_new_password) {
+      showAlertMessage("error", "Please fill in all password fields");
+      return;
+    }
+
+    if (formData.new_password !== formData.confirm_new_password) {
+      showAlertMessage("error", "New passwords do not match");
+      return;
+    }
+
+    if (formData.new_password.length < 6) {
+      showAlertMessage("error", "Password must be at least 6 characters");
+      return;
+    }
+
+    if (!userId) {
+      showAlertMessage("error", "User not logged in");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/updatepassword/${userId}`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            current_password: formData.current_password,
+            new_password: formData.new_password,
+            confirm_new_password: formData.confirm_new_password,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update password");
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        showAlertMessage("success", "Password updated successfully!");
+        setFormData((prev) => ({
+          ...prev,
+          current_password: "",
+          new_password: "",
+          confirm_new_password: "",
+        }));
+        setIsPasswordSection(false);
+      } else {
+        showAlertMessage("error", result.message || "Failed to update password");
+      }
+    } catch (error) {
+      console.error("Error updating password:", error);
+      showAlertMessage("error", error.message || "Failed to update password");
+    }
+  };
+
   const handleSave = async () => {
     if (!formData.full_name || !formData.email) {
       showAlertMessage("error", "Please fill in all required fields");
       return;
-    }
-
-    if (isPasswordSection) {
-      if (
-        !formData.currentPassword ||
-        !formData.newPassword ||
-        !formData.confirmPassword
-      ) {
-        showAlertMessage("error", "Please fill in all password fields");
-        return;
-      }
-
-      if (formData.newPassword !== formData.confirmPassword) {
-        showAlertMessage("error", "New passwords do not match");
-        return;
-      }
-
-      if (formData.newPassword.length < 6) {
-        showAlertMessage("error", "Password must be at least 6 characters");
-        return;
-      }
     }
 
     if (!userId) {
@@ -208,9 +248,6 @@ export default function AccountSettings() {
         return `https://${url}`;
       };
       
-      if (formData.newPassword) {
-        formDataToSend.append("password", formData.newPassword);
-      }
       formDataToSend.append("facebook", prependHttps(formData.facebook));
       formDataToSend.append("instagram", prependHttps(formData.instagram));
       formDataToSend.append("tik_tok", prependHttps(formData.tik_tok));
@@ -243,15 +280,6 @@ export default function AccountSettings() {
           setProfileImageUrl(result.data.profile_image_url);
         }
 
-        if (isPasswordSection) {
-          setFormData((prev) => ({
-            ...prev,
-            currentPassword: "",
-            newPassword: "",
-            confirmPassword: "",
-          }));
-          setIsPasswordSection(false);
-        }
         setSelectedImageFile(null);
         
         // Dispatch custom event to notify navbar to refresh profile
@@ -315,9 +343,9 @@ export default function AccountSettings() {
           email: userData.email || "",
           phone_number: userData.phone_number || "",
           address: userData.address === "Not Provided" ? "" : (userData.address || ""),
-          currentPassword: "",
-          newPassword: "",
-          confirmPassword: "",
+          current_password: "",
+          new_password: "",
+          confirm_new_password: "",
           pin: "",
           facebook: stripHttps(userData.facebook),
           instagram: stripHttps(userData.instagram),
@@ -698,8 +726,8 @@ export default function AccountSettings() {
                                 type={
                                   showPasswords.current ? "text" : "password"
                                 }
-                                name="currentPassword"
-                                value={formData.currentPassword}
+                                name="current_password"
+                                value={formData.current_password}
                                 onChange={handleInputChange}
                                 className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
@@ -729,8 +757,8 @@ export default function AccountSettings() {
                             <div className="relative">
                               <input
                                 type={showPasswords.new ? "text" : "password"}
-                                name="newPassword"
-                                value={formData.newPassword}
+                                name="new_password"
+                                value={formData.new_password}
                                 onChange={handleInputChange}
                                 className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
@@ -760,8 +788,8 @@ export default function AccountSettings() {
                                 type={
                                   showPasswords.confirm ? "text" : "password"
                                 }
-                                name="confirmPassword"
-                                value={formData.confirmPassword}
+                                name="confirm_new_password"
+                                value={formData.confirm_new_password}
                                 onChange={handleInputChange}
                                 className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                                 required
@@ -789,7 +817,7 @@ export default function AccountSettings() {
                               Cancel
                             </button>
                             <button
-                              onClick={() => setIsPasswordSection(false)}
+                              onClick={handlePasswordUpdate}
                               className="text-sm text-white bg-blue-500 hover:cursor-pointer  rounded-full border border-gray-200 p-2 my-2"
                             >
                               Save
