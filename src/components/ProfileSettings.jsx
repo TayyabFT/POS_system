@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FiUpload,
   FiEye,
@@ -15,22 +15,26 @@ import {
 import Sidebar from "./Sidebar";
 import Navbar from "./navbar";
 import { FcEditImage } from "react-icons/fc";
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 export default function AccountSettings() {
+  const [userId, setUserId] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    firstName: "Anaish",
-    lastName: "Whitton",
-    email: "anaish@gmail.com",
-    phoneNumber: "+1 (555) 000-0000",
+    full_name: "",
+    email: "",
+    phone_number: "",
     address: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
-    pin: "****",
-    facebook: "facebook.com/",
-    instagram: "instagram.com/",
-    tiktok: "tiktok.com/@",
-    x: "x.com/@",
+    pin: "",
+    facebook: "",
+    instagram: "",
+    tik_tok: "",
+    thread: "",
   });
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
+  const [selectedImageFile, setSelectedImageFile] = useState(null);
 
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -39,7 +43,6 @@ export default function AccountSettings() {
     pin: false,
   });
 
-  const [avatar, setAvatar] = useState(null);
   const [showAlert, setShowAlert] = useState({
     type: "",
     message: "",
@@ -59,6 +62,70 @@ export default function AccountSettings() {
     "3930 Poplar Dr.",
     "775 Rolling Green Rd.",
   ];
+
+  const showAlertMessage = (type, message) => {
+    setShowAlert({ type, message, visible: true });
+    setTimeout(() => {
+      setShowAlert((prev) => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
+  // Fetch user profile on mount
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const storedUserId = localStorage.getItem("userid");
+        if (!storedUserId) {
+          showAlertMessage("error", "User not logged in");
+          setLoading(false);
+          return;
+        }
+
+        setUserId(storedUserId);
+        const response = await fetch(
+          `${API_BASE_URL}/getuserprofile/${storedUserId}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch user profile");
+        }
+
+        const result = await response.json();
+        if (result.success && result.data) {
+          const userData = result.data;
+          
+          // Strip "https://" prefix from social media URLs for display
+          const stripHttps = (url) => {
+            if (!url) return "";
+            return url.replace(/^https?:\/\//, "");
+          };
+          
+          setFormData({
+            full_name: userData.full_name || "",
+            email: userData.email || "",
+            phone_number: userData.phone_number || "",
+            address: userData.address === "Not Provided" ? "" : (userData.address || ""),
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+            pin: "",
+            facebook: stripHttps(userData.facebook),
+            instagram: stripHttps(userData.instagram),
+            tik_tok: stripHttps(userData.tik_tok),
+            thread: stripHttps(userData.thread),
+          });
+          setProfileImageUrl(userData.profile_image_url);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        showAlertMessage("error", "Failed to load user profile");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -86,22 +153,16 @@ export default function AccountSettings() {
   const handleAvatarUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
+      setSelectedImageFile(file);
       const reader = new FileReader();
-      reader.onload = (e) => setAvatar(e.target.result);
+      reader.onload = (e) => setProfileImageUrl(e.target.result);
       reader.readAsDataURL(file);
       showAlertMessage("success", "Avatar uploaded successfully!");
     }
   };
 
-  const showAlertMessage = (type, message) => {
-    setShowAlert({ type, message, visible: true });
-    setTimeout(() => {
-      setShowAlert((prev) => ({ ...prev, visible: false }));
-    }, 3000);
-  };
-
-  const handleSave = () => {
-    if (!formData.firstName || !formData.lastName || !formData.email) {
+  const handleSave = async () => {
+    if (!formData.full_name || !formData.email) {
       showAlertMessage("error", "Please fill in all required fields");
       return;
     }
@@ -127,16 +188,82 @@ export default function AccountSettings() {
       }
     }
 
-    showAlertMessage("success", "Account settings updated successfully!");
+    if (!userId) {
+      showAlertMessage("error", "User not logged in");
+      return;
+    }
 
-    if (isPasswordSection) {
-      setFormData((prev) => ({
-        ...prev,
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      }));
-      setIsPasswordSection(false);
+    try {
+      // Prepare form data for image upload
+      const formDataToSend = new FormData();
+      formDataToSend.append("full_name", formData.full_name);
+      formDataToSend.append("email", formData.email);
+      formDataToSend.append("phone_number", formData.phone_number || "");
+      formDataToSend.append("address", formData.address || "Not Provided");
+      
+      // Prepend "https://" to social media URLs if they don't already have it
+      const prependHttps = (url) => {
+        if (!url) return "";
+        if (url.startsWith("http://") || url.startsWith("https://")) return url;
+        return `https://${url}`;
+      };
+      
+      if (formData.newPassword) {
+        formDataToSend.append("password", formData.newPassword);
+      }
+      formDataToSend.append("facebook", prependHttps(formData.facebook));
+      formDataToSend.append("instagram", prependHttps(formData.instagram));
+      formDataToSend.append("tik_tok", prependHttps(formData.tik_tok));
+      formDataToSend.append("thread", prependHttps(formData.thread));
+
+      // Add image file if selected
+      if (selectedImageFile) {
+        formDataToSend.append("image", selectedImageFile);
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/updateuserprofile/${userId}`,
+        {
+          method: "PUT",
+          body: formDataToSend,
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to update profile");
+      }
+
+      const result = await response.json();
+      if (result.success) {
+        showAlertMessage("success", "Account settings updated successfully!");
+        
+        // Update profile image URL if returned
+        if (result.data?.profile_image_url) {
+          setProfileImageUrl(result.data.profile_image_url);
+        }
+
+        if (isPasswordSection) {
+          setFormData((prev) => ({
+            ...prev,
+            currentPassword: "",
+            newPassword: "",
+            confirmPassword: "",
+          }));
+          setIsPasswordSection(false);
+        }
+        setSelectedImageFile(null);
+        
+        // Dispatch custom event to notify navbar to refresh profile
+        window.dispatchEvent(new Event("profileUpdated"));
+        // Also update localStorage to trigger storage event for other tabs
+        localStorage.setItem("profileUpdated", Date.now().toString());
+      } else {
+        showAlertMessage("error", result.message || "Failed to update profile");
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      showAlertMessage("error", error.message || "Failed to update profile");
     }
   };
 
@@ -158,25 +285,54 @@ export default function AccountSettings() {
     showAlertMessage("success", "Email successfully updated");
   };
 
-  const handleDiscard = () => {
-    setFormData({
-      firstName: "Anaish",
-      lastName: "Whitton",
-      email: "anaish@gmail.com",
-      phoneNumber: "+1 (555) 000-0000",
-      address: "",
-      currentPassword: "",
-      newPassword: "",
-      confirmPassword: "",
-      pin: "****",
-      facebook: "facebook.com/",
-      instagram: "instagram.com/",
-      tiktok: "tiktok.com/@",
-      x: "x.com/@",
-    });
-    setAvatar(null);
-    setIsPasswordSection(false);
-    showAlertMessage("success", "Changes discarded");
+  const handleDiscard = async () => {
+    if (!userId) {
+      showAlertMessage("error", "User not logged in");
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/getuserprofile/${userId}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        const userData = result.data;
+        
+        // Strip "https://" prefix from social media URLs for display
+        const stripHttps = (url) => {
+          if (!url) return "";
+          return url.replace(/^https?:\/\//, "");
+        };
+        
+        setFormData({
+          full_name: userData.full_name || "",
+          email: userData.email || "",
+          phone_number: userData.phone_number || "",
+          address: userData.address === "Not Provided" ? "" : (userData.address || ""),
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+          pin: "",
+          facebook: stripHttps(userData.facebook),
+          instagram: stripHttps(userData.instagram),
+          tik_tok: stripHttps(userData.tik_tok),
+          thread: stripHttps(userData.thread),
+        });
+        setProfileImageUrl(userData.profile_image_url);
+        setSelectedImageFile(null);
+        setIsPasswordSection(false);
+        showAlertMessage("success", "Changes discarded");
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+      showAlertMessage("error", "Failed to reload user profile");
+    }
   };
 
   const togglePasswordVisibility = (field) => {
@@ -192,9 +348,28 @@ export default function AccountSettings() {
     showAlertMessage("success", "New PIN generated successfully!");
   };
 
-  const getInitials = (firstName, lastName) => {
-    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  const getInitials = (fullName) => {
+    if (!fullName) return "U";
+    const names = fullName.trim().split(" ");
+    if (names.length >= 2) {
+      return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return fullName.charAt(0).toUpperCase();
   };
+
+  if (loading) {
+    return (
+      <div className="flex bg-white font-sans text-gray-900 h-screen">
+        <Sidebar />
+        <main className="flex flex-1 flex-col overflow-hidden">
+          <Navbar />
+          <div className="mx-11 my-4 pr-4 overflow-y-auto flex items-center justify-center">
+            <div className="text-gray-600">Loading profile...</div>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="flex  bg-white font-sans text-gray-900 h-screen ">
@@ -332,14 +507,14 @@ export default function AccountSettings() {
                   <div>
                     <div className="flex gap-4">
                       <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center text-xl font-semibold text-gray-600 overflow-hidden">
-                        {avatar ? (
+                        {profileImageUrl ? (
                           <img
-                            src={avatar}
+                            src={profileImageUrl}
                             alt="Avatar"
                             className="w-full h-full object-cover"
                           />
                         ) : (
-                          getInitials(formData.firstName, formData.lastName)
+                          getInitials(formData.full_name)
                         )}
                       </div>
                       <div className="border border-dashed p-4 rounded-lg flex gap-2">
@@ -360,29 +535,16 @@ export default function AccountSettings() {
                         </label>
                       </div>
                     </div>
-                    {/* Name Fields */}
+                    {/* Name Field */}
                     <div className="">
                       <div className="my-2">
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          First name <span className="text-red-500">*</span>
+                          Full name <span className="text-red-500">*</span>
                         </label>
                         <input
                           type="text"
-                          name="firstName"
-                          value={formData.firstName}
-                          onChange={handleInputChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Last name <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          name="lastName"
-                          value={formData.lastName}
+                          name="full_name"
+                          value={formData.full_name}
                           onChange={handleInputChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           required
@@ -432,8 +594,8 @@ export default function AccountSettings() {
                     </label>
                     <input
                       type="tel"
-                      name="phoneNumber"
-                      value={formData.phoneNumber}
+                      name="phone_number"
+                      value={formData.phone_number}
                       onChange={handleInputChange}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
@@ -724,7 +886,7 @@ export default function AccountSettings() {
                     </div>
                   </div>
 
-                  {/* TikTok & X */}
+                  {/* TikTok & Thread */}
                   <div className="">
                     <div className="w-11">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -736,8 +898,8 @@ export default function AccountSettings() {
                         </span>
                         <input
                           type="text"
-                          name="tiktok"
-                          value={formData.tiktok}
+                          name="tik_tok"
+                          value={formData.tik_tok}
                           onChange={handleInputChange}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
@@ -745,7 +907,7 @@ export default function AccountSettings() {
                     </div>
                     <div className="w-11">
                       <label className="block text-sm font-medium text-gray-700 mb-2">
-                        X
+                        Thread
                       </label>
                       <div className="flex ">
                         <span className="inline-flex items-center px-3 text-sm text-gray-500 bg-gray-50 border border-r-0 border-gray-300 rounded-l-lg ">
@@ -753,8 +915,8 @@ export default function AccountSettings() {
                         </span>
                         <input
                           type="text"
-                          name="x"
-                          value={formData.x}
+                          name="thread"
+                          value={formData.thread}
                           onChange={handleInputChange}
                           className="flex-1 px-3 py-2 border border-gray-300 rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />

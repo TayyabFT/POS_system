@@ -18,9 +18,15 @@ import { useRouter } from "next/navigation";
 import { useScroll } from "framer-motion";
 import { useState, useRef, useEffect } from "react";
 import NotificationPanel from "./Notification";
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
 export default function Navbar({ activeTab, tabname }) {
   const [profileDrop, setProfileDrop] = useState(false);
+  const [userProfile, setUserProfile] = useState({
+    full_name: "",
+    profile_image_url: null,
+  });
+  const [loading, setLoading] = useState(true);
   const formatDate = () => {
     const options = {
       weekday: "short",
@@ -108,6 +114,73 @@ export default function Navbar({ activeTab, tabname }) {
     router.push(item.path);
     setProfileDrop(false);
   };
+
+  // Fetch user profile
+  const fetchUserProfile = async () => {
+    try {
+      const storedUserId = localStorage.getItem("userid");
+      if (!storedUserId) {
+        setLoading(false);
+        return;
+      }
+
+      const response = await fetch(
+        `${API_BASE_URL}/getuserprofile/${storedUserId}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch user profile");
+      }
+
+      const result = await response.json();
+      if (result.success && result.data) {
+        setUserProfile({
+          full_name: result.data.full_name || "",
+          profile_image_url: result.data.profile_image_url,
+        });
+      }
+    } catch (error) {
+      console.error("Error fetching user profile:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Get initials from full name
+  const getInitials = (fullName) => {
+    if (!fullName) return "U";
+    const names = fullName.trim().split(" ");
+    if (names.length >= 2) {
+      return `${names[0].charAt(0)}${names[names.length - 1].charAt(0)}`.toUpperCase();
+    }
+    return fullName.charAt(0).toUpperCase();
+  };
+
+  // Fetch profile on mount and listen for updates
+  useEffect(() => {
+    fetchUserProfile();
+
+    // Listen for profile update events from ProfileSettings
+    const handleProfileUpdate = () => {
+      fetchUserProfile();
+    };
+
+    // Listen for custom event
+    window.addEventListener("profileUpdated", handleProfileUpdate);
+
+    // Listen for storage changes (if profile is updated via localStorage)
+    const handleStorageChange = (e) => {
+      if (e.key === "profileUpdated") {
+        fetchUserProfile();
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+
+    return () => {
+      window.removeEventListener("profileUpdated", handleProfileUpdate);
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, []);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -197,8 +270,18 @@ export default function Navbar({ activeTab, tabname }) {
         className="relative flex items-center gap-3 rounded-full border border-gray-200 p-2"
         ref={profileDropdownRef}
       >
-        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 border hover:cursor-pointer border-gray-300">
-          <FiUser size={16} />
+        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-gray-800 border hover:cursor-pointer border-gray-300 overflow-hidden">
+          {userProfile.profile_image_url ? (
+            <img
+              src={userProfile.profile_image_url}
+              alt="Profile"
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="text-xs font-semibold">
+              {getInitials(userProfile.full_name)}
+            </span>
+          )}
         </div>
         <span
           className="font-medium flex gap-1 hover:cursor-pointer"
@@ -206,7 +289,7 @@ export default function Navbar({ activeTab, tabname }) {
             setProfileDrop(!profileDrop);
           }}
         >
-          Alex Bizer{" "}
+          {userProfile.full_name || "User"}{" "}
           <FiChevronDown className="hover:cursor-pointer" size={20} />
         </span>
         {profileDrop && (
