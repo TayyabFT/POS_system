@@ -502,7 +502,7 @@ const SettingsPage = () => {
                     {logoPreview ? (
                       <img src={logoPreview} alt="Business Logo" className="w-full h-full object-cover" />
                     ) : (
-                      <FiShoppingCart className="w-12 h-12 text-gray-400" />
+                      <FiSave className="w-12 h-12 text-gray-400" />
                     )}
                   </div>
                   <div>
@@ -799,7 +799,7 @@ const SettingsPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-3 justify-end">
                           <button className="text-blue-600 hover:text-blue-900">
-                            <FiEdit className="w-4 h-4" />
+                            {/* <FiEdit className="w-4 h-4" /> */}
                           </button>
                           <button className="text-red-600 hover:text-red-900">
                             <FiLock className="w-4 h-4" />
@@ -837,7 +837,7 @@ const SettingsPage = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center space-x-3 justify-end">
                           <button className="text-blue-600 hover:text-blue-900">
-                            <FiEdit className="w-4 h-4" />
+                            {/* <FiEdit className="w-4 h-4" /> */}
                           </button>
                           <button className="text-red-600 hover:text-red-900">
                             <FiLock className="w-4 h-4" />
