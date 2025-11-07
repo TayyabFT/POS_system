@@ -32,9 +32,12 @@ const MenuSection = ({
       
       const data = await response.json();
       
-      if (data.success && data.message) {
+      // Handle response format: message contains the products array
+      const products = Array.isArray(data.message) ? data.message : [];
+      
+      if (products && products.length > 0) {
         // Transform the API response to match our expected format
-        const transformedItems = data.message.map(product => ({
+        const transformedItems = products.map(product => ({
           id: product.id,
           name: product.product_name,
           price: parseFloat(product.price),
@@ -51,11 +54,11 @@ const MenuSection = ({
         setItems(transformedItems);
         
         // Extract unique categories from products
-        const uniqueCategories = [...new Set(data.message.map(product => product.category_name))]
+        const uniqueCategories = [...new Set(products.map(product => product.category_name))]
           .filter(category => category) // Remove empty/null categories
           .map(category => ({
             name: category,
-            count: data.message.filter(product => product.category_name === category).length
+            count: products.filter(product => product.category_name === category).length
           }));
         
         setCategories(uniqueCategories);

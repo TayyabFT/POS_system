@@ -89,7 +89,7 @@ const OrderSummary = ({
         discount: discount || 0,
         order_note: orderNote || "",
         selected_items: orderItems.map((item) => ({
-          id: item.id,
+          id: item.id, // Use the original product ID from the server
           product_name: item.name,
           quantity: item.quantity,
           price: item.price,
@@ -196,12 +196,12 @@ const OrderSummary = ({
           <div className="space-y-3 mb-6">
             {orderItems.map((item) => (
               <div
-                key={item.id}
+                key={item.cartItemId || item.id}
                 className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200"
               >
                 <div className="flex items-center gap-3">
                   <button
-                    onClick={() => removeItemFromOrder(item.id)}
+                    onClick={() => removeItemFromOrder(item.cartItemId || item.id)}
                     className="text-gray-400 hover:text-black transition p-1"
                   >
                     <FiTrash2 size={16} />
@@ -216,14 +216,14 @@ const OrderSummary = ({
                 <div className="flex items-center gap-2">
                   <button
                     className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 transition border border-gray-300"
-                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity - 1)}
                   >
                     -
                   </button>
                   <span className="w-6 text-center">{item.quantity}</span>
                   <button
                     className="w-6 h-6 flex items-center justify-center bg-gray-200 rounded hover:bg-gray-300 transition border border-gray-300"
-                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() => updateQuantity(item.cartItemId || item.id, item.quantity + 1)}
                   >
                     +
                   </button>

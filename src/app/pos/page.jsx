@@ -41,18 +41,18 @@ export default function POSOrderPage() {
   };
 
   const addItemToOrder = (item) => {
-    setOrderItems([...orderItems, { ...item, id: Date.now(), quantity: 1 }]);
+    setOrderItems([...orderItems, { ...item, cartItemId: Date.now(), quantity: 1 }]);
   };
 
-  const removeItemFromOrder = (id) => {
-    setOrderItems(orderItems.filter((item) => item.id !== id));
+  const removeItemFromOrder = (cartItemId) => {
+    setOrderItems(orderItems.filter((item) => item.cartItemId !== cartItemId));
   };
 
-  const updateQuantity = (id, newQuantity) => {
+  const updateQuantity = (cartItemId, newQuantity) => {
     if (newQuantity < 1) return;
     setOrderItems(
       orderItems.map((item) =>
-        item.id === id ? { ...item, quantity: newQuantity } : item
+        item.cartItemId === cartItemId ? { ...item, quantity: newQuantity } : item
       )
     );
   };
