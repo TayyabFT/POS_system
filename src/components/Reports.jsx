@@ -247,7 +247,7 @@ const ReportsPage = () => {
           </header>
 
           {/* Report Type Selection */}
-          <div className="mb-8">
+          {/* <div className="mb-8"> */}
           {/* <div className="flex flex-wrap gap-3 bg-white p-2 rounded-lg shadow-sm inline-block">
             <button 
               onClick={() => setActiveReport("sales")}
@@ -274,7 +274,7 @@ const ReportsPage = () => {
               Tax Reports
             </button>
           </div> */}
-          </div>
+          {/* </div> */}
 
           {/* Date Filter */}
           <div className="flex items-center justify-between mb-6">

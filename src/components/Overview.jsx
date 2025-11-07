@@ -18,6 +18,8 @@ import {
   FiEye,
   FiEdit,
   FiTrash2,
+  FiChevronLeft,
+  FiChevronRight,
 } from "react-icons/fi";
 import Navbar from "./navbar";
 import Sidebar from "./Sidebar";
@@ -47,6 +49,8 @@ const RestaurantPOS = () => {
   const [loadingOrders, setLoadingOrders] = useState(true);
   const [mostOrderedItems, setMostOrderedItems] = useState([]);
   const [loadingMostOrdered, setLoadingMostOrdered] = useState(true);
+  const [currentOrdersPage, setCurrentOrdersPage] = useState(1);
+  const ordersPerPage = 3;
 
   // Sample data based on the UI
   const tabButtons = ["XO POS", "Order", "Reservation", "Transaction", "Table"];
@@ -254,6 +258,17 @@ const RestaurantPOS = () => {
       setLoadingMostOrdered(false);
     }
   };
+
+  // Calculate paginated orders
+  const totalOrdersPages = Math.ceil(ongoingOrders.length / ordersPerPage);
+  const startIndex = (currentOrdersPage - 1) * ordersPerPage;
+  const endIndex = startIndex + ordersPerPage;
+  const paginatedOrders = ongoingOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when orders change
+  useEffect(() => {
+    setCurrentOrdersPage(1);
+  }, [ongoingOrders.length]);
 
   // Fetch data on component mount
   useEffect(() => {
@@ -755,7 +770,7 @@ const RestaurantPOS = () => {
                 <div className="space-y-3">
                   {loadingOrders ? (
                     <div className="space-y-3">
-                      {[1, 2].map((i) => (
+                      {[1, 2, 3].slice(0, ordersPerPage).map((i) => (
                         <div
                           key={i}
                           className="flex items-center justify-between p-3 bg-gray-50 rounded-lg animate-pulse"
@@ -776,47 +791,97 @@ const RestaurantPOS = () => {
                       No ongoing orders
                     </div>
                   ) : (
-                    ongoingOrders.map((order, index) => (
-                      <div
-                        key={order.order_id || index}
-                      className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
-                          {order.table}
-                        </div>
-                        <div>
-                          <div className="text-sm font-medium">
-                            Order#{order.id}
-                          </div>
-                          <div className="text-xs text-gray-500">
-                            {order.time}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center">
-                            <FiUser size={14} className="text-white" />
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium">
-                              {order.customer}
+                    <>
+                      {paginatedOrders.map((order, index) => (
+                        <div
+                          key={order.order_id || index}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center text-white text-xs font-semibold">
+                              {order.table}
                             </div>
-                              <div className={`text-xs ${
-                                order.status === "Ready" ? "text-green-600" :
-                                order.status === "Preparing" ? "text-yellow-600" :
-                                "text-gray-600"
-                              }`}>
-                              {order.status}
+                            <div>
+                              <div className="text-sm font-medium">
+                                Order#{order.id}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                {order.time}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-pink-500 flex items-center justify-center">
+                                <FiUser size={14} className="text-white" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium">
+                                  {order.customer}
+                                </div>
+                                <div className={`text-xs ${
+                                  order.status === "Ready" ? "text-green-600" :
+                                  order.status === "Preparing" ? "text-yellow-600" :
+                                  "text-gray-600"
+                                }`}>
+                                  {order.status}
+                                </div>
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                    </>
                   )}
                 </div>
+                
+                {/* Pagination Controls */}
+                {!loadingOrders && ongoingOrders.length > ordersPerPage && (
+                  <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-200">
+                    <div className="text-xs text-gray-500">
+                      Showing {startIndex + 1}-{Math.min(endIndex, ongoingOrders.length)} of {ongoingOrders.length} orders
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setCurrentOrdersPage(prev => Math.max(1, prev - 1))}
+                        disabled={currentOrdersPage === 1}
+                        className={`p-1.5 rounded-md transition-colors ${
+                          currentOrdersPage === 1
+                            ? "text-gray-300 cursor-not-allowed"
+                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        }`}
+                      >
+                        <FiChevronLeft size={16} />
+                      </button>
+                      <div className="flex items-center gap-1">
+                        {Array.from({ length: totalOrdersPages }, (_, i) => i + 1).map((page) => (
+                          <button
+                            key={page}
+                            onClick={() => setCurrentOrdersPage(page)}
+                            className={`w-7 h-7 text-xs rounded-md transition-colors ${
+                              currentOrdersPage === page
+                                ? "bg-black text-white"
+                                : "text-gray-600 hover:bg-gray-100"
+                            }`}
+                          >
+                            {page}
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setCurrentOrdersPage(prev => Math.min(totalOrdersPages, prev + 1))}
+                        disabled={currentOrdersPage === totalOrdersPages}
+                        className={`p-1.5 rounded-md transition-colors ${
+                          currentOrdersPage === totalOrdersPages
+                            ? "text-gray-300 cursor-not-allowed"
+                            : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        }`}
+                      >
+                        <FiChevronRight size={16} />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Upcoming Reservations */}
