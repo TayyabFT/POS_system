@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   FiUser,
   FiClock,
@@ -20,8 +20,8 @@ import {
   FiTrash2,
 } from "react-icons/fi";
 import Navbar from "./navbar";
-
 import Sidebar from "./Sidebar";
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 
 const RestaurantPOS = () => {
   const [activeTab, setActiveTab] = useState("Overview");
@@ -32,49 +32,245 @@ const RestaurantPOS = () => {
   const [guestCount, setGuestCount] = useState(2);
   const [selectedOrderFilter, setSelectedOrderFilter] = useState("All");
   const [menuFilter, setMenuFilter] = useState("Most Ordered"); // New state for menu filtering
+  
+  // Dashboard stats state
+  const [dashboardStats, setDashboardStats] = useState({
+    total_orders: "0",
+    ongoing_orders: "0",
+    paid_orders: "0",
+    revenue: "0.00",
+    dishes_sold: "0"
+  });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [ongoingOrders, setOngoingOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  const [mostOrderedItems, setMostOrderedItems] = useState([]);
+  const [loadingMostOrdered, setLoadingMostOrdered] = useState(true);
 
   // Sample data based on the UI
   const tabButtons = ["XO POS", "Order", "Reservation", "Transaction", "Table"];
 
+  // Fetch dashboard stats
+  const fetchDashboardStats = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        throw new Error("User ID not found. Please log in again.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/overview/getdashboardstats/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Handle response format
+      if (result.success && result.data) {
+        setDashboardStats({
+          total_orders: result.data.total_orders || "0",
+          ongoing_orders: result.data.ongoing_orders || "0",
+          paid_orders: result.data.paid_orders || "0",
+          revenue: result.data.revenue || "0.00",
+          dishes_sold: result.data.dishes_sold || "0"
+        });
+      } else if (result.statusCode === 200 && result.data) {
+        setDashboardStats({
+          total_orders: result.data.total_orders || "0",
+          ongoing_orders: result.data.ongoing_orders || "0",
+          paid_orders: result.data.paid_orders || "0",
+          revenue: result.data.revenue || "0.00",
+          dishes_sold: result.data.dishes_sold || "0"
+        });
+      }
+    } catch (err) {
+      console.error('Error fetching dashboard stats:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch ongoing orders
+  const fetchOngoingOrders = async () => {
+    try {
+      setLoadingOrders(true);
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        throw new Error("User ID not found. Please log in again.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/overview/getongoingorders/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Handle response format and transform data
+      let orders = [];
+      if (result.success && Array.isArray(result.data)) {
+        orders = result.data;
+      } else if (result.statusCode === 200 && Array.isArray(result.data)) {
+        orders = result.data;
+      }
+
+      // Transform API response to match UI structure
+      const transformedOrders = orders.map((order) => {
+        // Format date
+        const date = new Date(order.created_at);
+        const formattedDate = date.toLocaleDateString('en-US', { 
+          day: 'numeric', 
+          month: 'short', 
+          year: 'numeric' 
+        });
+        const formattedTime = date.toLocaleTimeString('en-US', { 
+          hour: '2-digit', 
+          minute: '2-digit',
+          hour12: true 
+        });
+        const formattedDateTime = `${formattedDate} • ${formattedTime}`;
+
+        // Determine order type
+        let orderType = "Dine In";
+        if (order.delivery) {
+          orderType = "Delivery";
+        } else if (order.pickup) {
+          orderType = "Pickup";
+        }
+
+        // Determine status
+        let status = "Pending";
+        if (order.ready_to_serve) {
+          status = "Ready";
+        } else if (order.in_preparation) {
+          status = "Preparing";
+        }
+
+        // Extract items from selected_items
+        const items = order.selected_items?.map(item => item.product_name) || [];
+
+        // Generate table number (use order_id as fallback if no table_number)
+        const tableNumber = order.table_number || `T${order.order_id}`;
+
+        return {
+          id: `XO${order.order_id}`,
+          order_id: order.order_id,
+          customer: order.customer_name || "Walk-in Customer",
+          table: tableNumber,
+          total: `+$${parseFloat(order.total || 0).toFixed(2)}`,
+          time: formattedDateTime,
+          status: status,
+          items: items,
+          orderType: orderType,
+          phone: order.phone_number,
+          subtotal: order.subtotal,
+          tax: order.tax,
+          discount: order.discount,
+          order_note: order.order_note,
+          delivery_address: order.delivery_address,
+          delivery_instruction: order.delivery_instruction,
+        };
+      });
+
+      setOngoingOrders(transformedOrders);
+    } catch (err) {
+      console.error('Error fetching ongoing orders:', err);
+      setOngoingOrders([]);
+    } finally {
+      setLoadingOrders(false);
+    }
+  };
+
+  // Fetch most ordered products
+  const fetchMostOrderedProducts = async () => {
+    try {
+      setLoadingMostOrdered(true);
+      const userId = localStorage.getItem("userid");
+      
+      if (!userId) {
+        throw new Error("User ID not found. Please log in again.");
+      }
+
+      const response = await fetch(`${API_BASE_URL}/overview/getmostorderedproducts/${userId}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      
+      // Handle response format and transform data
+      let products = [];
+      if (result.success && Array.isArray(result.data)) {
+        products = result.data;
+      } else if (result.statusCode === 200 && Array.isArray(result.data)) {
+        products = result.data;
+      }
+
+      // Transform API response to match UI structure
+      const transformedProducts = products.map((product, index) => {
+        // Calculate average price per unit
+        const totalRevenue = parseFloat(product.total_revenue || 0);
+        const totalQuantity = parseFloat(product.total_quantity_sold || 1);
+        const avgPrice = totalQuantity > 0 ? totalRevenue / totalQuantity : 0;
+
+        // Use emoji based on product name or default
+        const getEmoji = (name) => {
+          const nameLower = name.toLowerCase();
+          if (nameLower.includes('burger')) return '🍔';
+          if (nameLower.includes('pizza')) return '🍕';
+          if (nameLower.includes('salad')) return '🥗';
+          if (nameLower.includes('shirt') || nameLower.includes('clothing')) return '👕';
+          if (nameLower.includes('drink') || nameLower.includes('coffee')) return '☕';
+          if (nameLower.includes('cake') || nameLower.includes('dessert')) return '🍰';
+          return '📦'; // Default emoji
+        };
+
+        return {
+          id: product.product_id,
+          name: product.product_name,
+          price: `$${avgPrice.toFixed(2)}`,
+          image: getEmoji(product.product_name),
+          tag: `#${index + 1} Most Ordered`,
+          tagColor: "green",
+          orders: parseInt(product.total_quantity_sold || 0),
+          total_revenue: totalRevenue,
+        };
+      });
+
+      setMostOrderedItems(transformedProducts);
+    } catch (err) {
+      console.error('Error fetching most ordered products:', err);
+      setMostOrderedItems([]);
+    } finally {
+      setLoadingMostOrdered(false);
+    }
+  };
+
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchDashboardStats();
+    fetchOngoingOrders();
+    fetchMostOrderedProducts();
+  }, []);
+
+  // Format stats data from API
   const statsData = [
-    { label: "Ongoing Order", value: "5", change: "+34%", color: "blue" },
-    { label: "Total Order", value: "212", change: "+34%", color: "green" },
-    { label: "Tip Amount", value: "$800", change: "+34%", color: "orange" },
-    { label: "Revenue", value: "$1,800", change: "+24%", color: "purple" },
-    { label: "Paid Order", value: "45", change: "+24%", color: "teal" },
-    { label: "Dishes Sold", value: "180", change: "+7%", color: "pink" },
+    { label: "Ongoing Order", value: dashboardStats.ongoing_orders, change: "", color: "blue" },
+    { label: "Total Order", value: dashboardStats.total_orders, change: "", color: "green" },
+    { label: "Revenue", value: `$${parseFloat(dashboardStats.revenue || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, change: "", color: "purple" },
+    { label: "Paid Order", value: dashboardStats.paid_orders, change: "", color: "teal" },
+    { label: "Dishes Sold", value: dashboardStats.dishes_sold, change: "", color: "pink" },
   ];
 
-  // Most Ordered Items Data
-  const mostOrderedItems = [
-    {
-      id: 1,
-      name: "Classic Beef Burger",
-      price: "$15.99",
-      image: "🍔",
-      tag: "#1 Most Ordered",
-      tagColor: "green",
-      orders: 245,
-    },
-    {
-      id: 2,
-      name: "Margherita Pizza",
-      price: "$18.99",
-      image: "🍕",
-      tag: "#2 Most Ordered",
-      tagColor: "green",
-      orders: 198,
-    },
-    {
-      id: 3,
-      name: "Caesar Salad",
-      price: "$12.99",
-      image: "🥗",
-      tag: "#3 Most Ordered",
-      tagColor: "green",
-      orders: 176,
-    },
-  ];
 
   // Today's Special Items Data
   const todaySpecials = [
@@ -112,73 +308,9 @@ const RestaurantPOS = () => {
     return menuFilter === "Most Ordered" ? mostOrderedItems : todaySpecials;
   };
 
-  const ongoingOrders = [
-    {
-      id: "XO86378",
-      customer: "Ava Max",
-      table: "T1",
-      total: "+$56",
-      time: "9 Jul, 2024 • 04:27 PM",
-      status: "Success",
-      items: ["Spicy Tofu", "Green Salad"],
-      orderType: "Dine In",
-    },
-    {
-      id: "XO86379",
-      customer: "Ava Max",
-      table: "T3",
-      total: "+$32",
-      time: "9 Jul, 2024 • 04:27 PM",
-      status: "Pending",
-      items: ["Healthy Bowl"],
-      orderType: "Takeout",
-    },
-  ];
 
-  // Extended orders list for "View All Orders"
-  const allOrders = [
-    ...ongoingOrders,
-    {
-      id: "XO86380",
-      customer: "John Doe",
-      table: "T5",
-      total: "+$78",
-      time: "9 Jul, 2024 • 03:15 PM",
-      status: "Completed",
-      items: ["Pasta", "Caesar Salad", "Coffee"],
-      orderType: "Dine In",
-    },
-    {
-      id: "XO86381",
-      customer: "Sarah Wilson",
-      table: "T2",
-      total: "+$45",
-      time: "9 Jul, 2024 • 02:30 PM",
-      status: "Cancelled",
-      items: ["Burger", "Fries"],
-      orderType: "Delivery",
-    },
-    {
-      id: "XO86382",
-      customer: "Mike Johnson",
-      table: "T7",
-      total: "+$89",
-      time: "9 Jul, 2024 • 01:45 PM",
-      status: "Completed",
-      items: ["Steak", "Mashed Potatoes", "Wine"],
-      orderType: "Dine In",
-    },
-    {
-      id: "XO86383",
-      customer: "Emma Brown",
-      table: "T4",
-      total: "+$23",
-      time: "9 Jul, 2024 • 12:20 PM",
-      status: "Success",
-      items: ["Soup", "Bread"],
-      orderType: "Takeout",
-    },
-  ];
+  // Extended orders list for "View All Orders" - using ongoing orders for now
+  const allOrders = [...ongoingOrders];
 
   const upcomingReservations = [
     {
@@ -474,12 +606,32 @@ const RestaurantPOS = () => {
               </button>
             </div>
           </div>
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700">
+              {error}
+            </div>
+          )}
+
           <div className="grid grid-cols-12 gap-6">
             {/* Left Content */}
             <div className="col-span-8">
               {/* Stats Grid */}
               <div className="grid grid-cols-3 gap-4 mb-8">
-                {statsData.map((stat, index) => (
+                {loading ? (
+                  Array.from({ length: 5 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="bg-white rounded-lg p-4 border border-gray-200"
+                    >
+                      <div className="animate-pulse">
+                        <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                        <div className="h-8 bg-gray-200 rounded w-16 mb-2"></div>
+                        <div className="h-3 bg-gray-200 rounded w-20"></div>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  statsData.map((stat, index) => (
                   <div
                     key={index}
                     className="bg-white rounded-lg p-4 border border-gray-200"
@@ -488,14 +640,16 @@ const RestaurantPOS = () => {
                       <span className="text-sm text-gray-600">
                         {stat.label}
                       </span>
+                        {stat.change && (
                       <span className={`text-xs text-green-500`}>
                         {stat.change}
                       </span>
+                        )}
+                      </div>
+                      <div className="text-2xl font-semibold">{stat.value}</div>
                     </div>
-                    <div className="text-2xl font-semibold">{stat.value}</div>
-                    <div className="text-xs text-gray-500">vs yesterday</div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
 
               {/* Today Upscale Section */}
@@ -527,49 +681,68 @@ const RestaurantPOS = () => {
                 </div>
 
                 <div className="grid grid-cols-3 gap-4">
-                  {getCurrentItems().map((item) => (
-                    <div
-                      key={item.id}
-                      className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
-                    >
-                      <div className="relative mb-3">
-                        <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-4xl">
-                          {item.image}
-                        </div>
-                        <span
-                          className={`absolute top-2 left-2 text-xs px-2 py-1 rounded-full ${
-                            item.tagColor === "green"
-                              ? "bg-green-100 text-green-600"
-                              : "bg-orange-100 text-orange-600"
-                          }`}
-                        >
-                          {item.tag}
-                        </span>
-                        {item.discount && (
-                          <span className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                            {item.discount}
-                          </span>
-                        )}
+                  {menuFilter === "Most Ordered" && loadingMostOrdered ? (
+                    Array.from({ length: 3 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="border border-gray-200 rounded-lg p-4 animate-pulse"
+                      >
+                        <div className="w-full h-32 bg-gray-200 rounded-lg mb-3"></div>
+                        <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-200 rounded w-1/2"></div>
                       </div>
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-sm">{item.name}</h4>
-                        <div className="flex items-center justify-between">
-                          <span className="font-semibold">{item.price}</span>
-                          <button
-                            onClick={() => addToOrder(item)}
-                            className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 transition-colors"
-                          >
-                            Add
-                          </button>
-                        </div>
-                        {item.orders && (
-                          <div className="text-xs text-gray-500">
-                            {item.orders} orders this month
-                          </div>
-                        )}
-                      </div>
+                    ))
+                  ) : getCurrentItems().length === 0 ? (
+                    <div className="col-span-3 text-center py-8 text-gray-500 text-sm">
+                      {menuFilter === "Most Ordered" 
+                        ? "No most ordered products found" 
+                        : "No special items available"}
                     </div>
-                  ))}
+                  ) : (
+                    getCurrentItems().map((item) => (
+                      <div
+                        key={item.id}
+                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                      >
+                        <div className="relative mb-3">
+                          <div className="w-full h-32 bg-gray-100 rounded-lg flex items-center justify-center text-4xl">
+                            {item.image}
+                          </div>
+                          <span
+                            className={`absolute top-2 left-2 text-xs px-2 py-1 rounded-full ${
+                              item.tagColor === "green"
+                                ? "bg-green-100 text-green-600"
+                                : "bg-orange-100 text-orange-600"
+                            }`}
+                          >
+                            {item.tag}
+                          </span>
+                          {item.discount && (
+                            <span className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full">
+                              {item.discount}
+                            </span>
+                          )}
+                        </div>
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">{item.name}</h4>
+                          <div className="flex items-center justify-between">
+                            <span className="font-semibold">{item.price}</span>
+                            <button
+                              onClick={() => addToOrder(item)}
+                              className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600 transition-colors"
+                            >
+                              Add
+                            </button>
+                          </div>
+                          {item.orders && (
+                            <div className="text-xs text-gray-500">
+                              {item.orders} orders this month
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
@@ -580,9 +753,32 @@ const RestaurantPOS = () => {
               <div className="bg-white rounded-lg p-4 border border-gray-200">
                 <h3 className="font-semibold mb-4">📊 Ongoing Order</h3>
                 <div className="space-y-3">
-                  {ongoingOrders.map((order, index) => (
-                    <div
-                      key={index}
+                  {loadingOrders ? (
+                    <div className="space-y-3">
+                      {[1, 2].map((i) => (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between p-3 bg-gray-50 rounded-lg animate-pulse"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                            <div>
+                              <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                              <div className="h-3 bg-gray-200 rounded w-32"></div>
+                            </div>
+                          </div>
+                          <div className="w-8 h-8 bg-gray-200 rounded-full"></div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : ongoingOrders.length === 0 ? (
+                    <div className="text-center py-8 text-gray-500 text-sm">
+                      No ongoing orders
+                    </div>
+                  ) : (
+                    ongoingOrders.map((order, index) => (
+                      <div
+                        key={order.order_id || index}
                       className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
                     >
                       <div className="flex items-center gap-3">
@@ -607,14 +803,19 @@ const RestaurantPOS = () => {
                             <div className="text-sm font-medium">
                               {order.customer}
                             </div>
-                            <div className="text-xs text-green-600">
+                              <div className={`text-xs ${
+                                order.status === "Ready" ? "text-green-600" :
+                                order.status === "Preparing" ? "text-yellow-600" :
+                                "text-gray-600"
+                              }`}>
                               {order.status}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </div>
 

@@ -248,7 +248,7 @@ const ReportsPage = () => {
 
           {/* Report Type Selection */}
           <div className="mb-8">
-          <div className="flex flex-wrap gap-3 bg-white p-2 rounded-lg shadow-sm inline-block">
+          {/* <div className="flex flex-wrap gap-3 bg-white p-2 rounded-lg shadow-sm inline-block">
             <button 
               onClick={() => setActiveReport("sales")}
               className={`px-4 py-2 rounded-md text-sm font-medium ${activeReport === "sales" ? "bg-blue-100 text-blue-700" : "text-gray-600 hover:text-gray-800"}`}
@@ -273,7 +273,7 @@ const ReportsPage = () => {
             >
               Tax Reports
             </button>
-          </div>
+          </div> */}
           </div>
 
           {/* Date Filter */}
