@@ -31,10 +31,12 @@ import {
 } from "react-icons/fi";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import LogoutModal from "./LogoutModal";
 
 export default function Sidebar({ tabname }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const router = useRouter();
+  const [showLogout, setShowLogout] = useState(false);
 
   // Helper function to determine if a tab is active
   const isActive = (tabName) => tabname === tabName;
@@ -146,6 +148,31 @@ export default function Sidebar({ tabname }) {
             {sidebarOpen && <span>Settings</span>}
           </div>
         </nav>
+
+        {/* Logout button at bottom */}
+        <div className="mt-auto w-full px-4">
+          <div
+            className="flex items-center gap-3 p-3 rounded-lg transition cursor-pointer text-gray-300 hover:text-white hover:bg-gray-800"
+            onClick={() => setShowLogout(true)}
+          >
+            <FiX size={20} />
+            {sidebarOpen && <span>Logout</span>}
+          </div>
+        </div>
+
+        <LogoutModal
+          show={showLogout}
+          onClose={() => setShowLogout(false)}
+          onConfirm={() => {
+            setShowLogout(false);
+            try {
+              localStorage.removeItem("userid");
+            } catch (err) {
+              console.warn("Could not remove userid from localStorage:", err);
+            }
+            router.push("/");
+          }}
+        />
       </aside>
     </>
   );

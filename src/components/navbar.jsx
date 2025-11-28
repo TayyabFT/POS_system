@@ -315,7 +315,12 @@ export default function Navbar({ activeTab, tabname }) {
         onClose={() => setShowLogout(false)}
         onConfirm={() => {
           setShowLogout(false);
-          router.push("/profileSettings");
+          try {
+            localStorage.removeItem("userid");
+          } catch (err) {
+            console.warn("Could not remove userid from localStorage:", err);
+          }
+          router.push("/");
         }}
       />
     </header>
