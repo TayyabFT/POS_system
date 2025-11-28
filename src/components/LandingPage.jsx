@@ -11,7 +11,7 @@ import { useRouter } from 'next/navigation';
 const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isVideoOpen, setIsVideoOpen] = useState(false);
-const router = useRouter();
+  const router = useRouter();
   const handleLogin = () => {
     router.push('/dashboard');
   };

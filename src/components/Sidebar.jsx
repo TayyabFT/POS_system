@@ -85,7 +85,7 @@ export default function Sidebar({ tabname }) {
             <FiShoppingCart size={20} />
             {sidebarOpen && <span>Orders</span>}
           </div>
-
+{/* 
           <div
             className={getTabClasses("analytics")}
             onClick={() => {
@@ -94,7 +94,7 @@ export default function Sidebar({ tabname }) {
           >
             <FiPieChart size={20} />
             {sidebarOpen && <span>Analytics</span>}
-          </div>
+          </div> */}
 
           <div
             className={getTabClasses("customers")}

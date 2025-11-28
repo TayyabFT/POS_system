@@ -15,6 +15,7 @@ import {
 } from "react-icons/fi";
 import Sidebar from "./Sidebar";
 import Navbar from "./navbar";
+import API_BASE_URL from "@/apiconfig/API_BASE_URL";
 const HelpCenter = () => {
   const [selectedTopic, setSelectedTopic] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -26,45 +27,6 @@ const HelpCenter = () => {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState("");
-
-  const helpSections = [
-    {
-      icon: FiMapPin,
-      title: "Get Started",
-      subtitle: "Simple Setup Steps",
-      bgColor: "bg-blue-500",
-    },
-    {
-      icon: FiShield,
-      title: "Identity",
-      subtitle: "Manage and Safeguard Your Account",
-      bgColor: "bg-green-500",
-    },
-    {
-      icon: FiPackage,
-      title: "Inventory Management",
-      subtitle: "Streamline Your Stock Management",
-      bgColor: "bg-orange-500",
-    },
-    {
-      icon: FiUser,
-      title: "Account Management",
-      subtitle: "Personalize and Control Your Experience",
-      bgColor: "bg-purple-500",
-    },
-    {
-      icon: FiBarChart2,
-      title: "Report & Analysis",
-      subtitle: "Your Business at a Glance",
-      bgColor: "bg-cyan-500",
-    },
-    {
-      icon: FiHeadphones,
-      title: "Contacting Support",
-      subtitle: "Get the Assistance You Need",
-      bgColor: "bg-red-500",
-    },
-  ];
 
   const topicOptions = [
     "Technical Issue",
@@ -92,29 +54,54 @@ const HelpCenter = () => {
     setIsDropdownOpen(false);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     if (e) e.preventDefault();
     if (!isFormValid) return;
 
     setIsSubmitting(true);
+    setSubmitStatus("");
 
-    // Simulate form submission
-    setTimeout(() => {
-      setIsSubmitting(false);
-      setSubmitStatus("success");
-      setFormData({
-        name: "",
-        email: "",
-        topic: "",
-        message: "",
+    try {
+      const user_id = localStorage.getItem("userid") || "";
+      if (!user_id) throw new Error("User not found. Please log in.");
+
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        topic: formData.topic,
+        message: formData.message,
+      };
+
+      const res = await fetch(`${API_BASE_URL}/help/contactsupport/${user_id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
       });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.message || `HTTP ${res.status}`);
+      }
+
+      const data = await res.json().catch(() => null);
+
+      setSubmitStatus("success");
+      setFormData({ name: "", email: "", topic: "", message: "" });
       setSelectedTopic("");
 
       // Clear success message after 3 seconds
-      setTimeout(() => {
-        setSubmitStatus("");
-      }, 3000);
-    }, 1500);
+      setTimeout(() => setSubmitStatus(""), 3000);
+    } catch (err) {
+      console.error("Error sending support request:", err);
+      setSubmitStatus("error");
+
+      // Clear error message after 5 seconds
+      setTimeout(() => setSubmitStatus(""), 5000);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isFormValid =
@@ -130,40 +117,9 @@ const HelpCenter = () => {
             <h1 className="text-2xl font-semibold text-gray-900 mb-2">
               Help Center
             </h1>
-            <p className="text-gray-600 text-sm">
-              Explore all the resources and tools you need to effectively
-            </p>
           </div>
 
-          {/* Help Sections Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-            {helpSections.map((section, index) => {
-              const IconComponent = section.icon;
-              return (
-                <div
-                  key={index}
-                  className="bg-white rounded-lg border border-gray-200 p-6 hover:shadow-sm transition-shadow cursor-pointer"
-                >
-                  <div className="flex items-start gap-4">
-                    <div
-                      className={`${section.bgColor} rounded-lg p-3 flex-shrink-0`}
-                    >
-                      <IconComponent className="w-6 h-6 text-white" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-medium text-gray-900 text-base mb-1">
-                        {section.title}
-                      </h3>
-                      <p className="text-sm text-gray-600 leading-relaxed">
-                        {section.subtitle}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
+       
           {/* Contact Section */}
           <div className="flex gap-8">
             {/* Left Column - Question Text */}

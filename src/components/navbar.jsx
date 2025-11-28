@@ -47,9 +47,11 @@ export default function Navbar({ activeTab, tabname }) {
 
   const tabs = [
     { id: "new-order", label: "New Order", path: "/pos" },
-    { id: "reservations", label: "Reservations", path: "/reservation" },
+    // { id: "reservations", label: "Reservations", path: "/reservation" },
     { id: "transactions", label: "Transactions", path: "/transaction" },
     { id: "table", label: "Table", path: "/table" },
+    { id: "kitchen", label: "Kitchen", icon: FiHome, path: "/kitchen" },
+
   ];
 
   const dropdownProfileItems = [
@@ -69,14 +71,7 @@ export default function Navbar({ activeTab, tabname }) {
   ];
 
   const dropdownItems = [
-    { id: "kitchen", label: "Kitchen", icon: FiHome, path: "/kitchen" },
     { id: "overview", label: "Overview", icon: FiBarChart, path: "/overview" },
-    {
-      id: "performance",
-      label: "Performance",
-      icon: FiTrendingUp,
-      path: "/performance",
-    },
     {
       id: "setting",
       label: "Setting",
